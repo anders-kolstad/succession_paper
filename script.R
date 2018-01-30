@@ -1,0 +1,1 @@
+# Script for forest succession paper Anders L Kolstad

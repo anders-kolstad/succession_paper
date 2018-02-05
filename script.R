@@ -67,16 +67,17 @@ rm(Siteinfo_akershus)
 
 summary(density$yse)
 table(density$Region, density$yse)
-
+table(density$LocalityName, density$yse)
+# Hedmark has variable duration. Makes it confusing. Excluding that region
 
 
 
 # subsetting data
 levels(density$Region)
-regions <- c("Hedmark", "Trøndelag", "Telemark")
+regions <- c("Trøndelag", "Telemark")
 density <- density %>% 
   filter(Region %in% regions)
-
+density$Region <- factor(density$Region)
 
 # h_class housekeeping
 summary(density$h_class)
@@ -92,9 +93,10 @@ density$h_class[is.na(density$h_class)] <- 3
   
 #hist(density$h_class)
 plot(density$h_class) # height class 0 shouldn't exist
-View(density[density$h_class==0,]) # empty rows
+#View(density[density$h_class==0,]) # empty rows
 densityX <- density
 density <- densityX[densityX$h_class!=0,]
+rm(densityX)
 #plot(density$Height_cm)
 
 
@@ -107,10 +109,11 @@ plot(density$h_class2)
 
 density$fH <- as.factor(density$h_class2)
 levels(density$fH)
-unique(density$LocalityName) #47 locations
+unique(density$LocalityName) #31 locations
 
 
 # Standardising Quantity To mean number of trees per hectare (10.000 m2)
+density$Q_circle <- density$Quantity
 density$Quantity <- density$Quantity/(pi*4)*10000
 
 
@@ -129,89 +132,89 @@ SC <- density[density$fTaxa == "Salix caprea (Selje)",]
 
 
 # shold I remove locations where the species is very rare? What is rare?
-# could at least remove the 1's
+# Defining rare as below 5 records over 7-9 years
 par(mar=c(12,5,2,2))
 
 
 SC.sub <- aggregate(data = SC,
-                   Quantity~LocalityName,
+                    Q_circle~LocalityName,
                    FUN = sum)
 BP.sub <- aggregate(data = BP,
-                    Quantity~LocalityName,
+                    Q_circle~LocalityName,
                     FUN = sum)
 PS.sub <- aggregate(data = PS,
-                    Quantity~LocalityName,
+                    Q_circle~LocalityName,
                     FUN = sum)
 PA.sub <- aggregate(data = PA,
-                    Quantity~LocalityName,
+                    Q_circle~LocalityName,
                     FUN = sum)
 SA.sub <- aggregate(data = SA,
-                    Quantity~LocalityName,
+                    Q_circle~LocalityName,
                     FUN = sum)
 
 #SC.sub$fLoc <- as.factor(SC.sub$LocalityName)
 
-plot(Quantity~fLoc, las=2, type= "n", data = SC.sub)
-text(SC.sub$fLoc, SC.sub$Quantity, label=SC.sub$Quantity)
-plot(Quantity~as.factor(LocalityName), las=2, type= "n", data = BP.sub)
-text(as.factor(BP.sub$LocalityName), BP.sub$Quantity, label=BP.sub$Quantity)
-plot(Quantity~as.factor(LocalityName), las=2, type= "n", data = PS.sub)
-text(as.factor(PS.sub$LocalityName), PS.sub$Quantity, label=PS.sub$Quantity)
-plot(Quantity~as.factor(LocalityName), las=2, type= "n", data = PA.sub)
-text(as.factor(PA.sub$LocalityName), PA.sub$Quantity, label=PA.sub$Quantity)
-plot(Quantity~as.factor(LocalityName), las=2, type= "n", data = SA.sub)
-text(as.factor(SA.sub$LocalityName), SA.sub$Quantity, label=SA.sub$Quantity)
+#plot(Q_circle~as.factor(LocalityName), las=2, type= "n", data = SC.sub)
+#text(as.factor(SC.sub$LocalityName), SC.sub$Q_circle, label=SC.sub$Q_circle)
+#plot(Q_circle~as.factor(LocalityName), las=2, type= "n", data = BP.sub)
+#text(as.factor(BP.sub$LocalityName), BP.sub$Q_circle, label=BP.sub$Q_circle)
+#plot(Q_circle~as.factor(LocalityName), las=2, type= "n", data = PS.sub)
+#text(as.factor(PS.sub$LocalityName), PS.sub$Q_circle, label=PS.sub$Q_circle)
+#plot(Q_circle~as.factor(LocalityName), las=2, type= "n", data = PA.sub)
+#text(as.factor(PA.sub$LocalityName), PA.sub$Q_circle, label=PA.sub$Q_circle)
+#plot(Q_circle~as.factor(LocalityName), las=2, type= "n", data = SA.sub)
+#text(as.factor(SA.sub$LocalityName), SA.sub$Q_circle, label=SA.sub$Q_circle)
 
 
-unique(density$LocalityName) 
-SC.remove <- SC.sub$LocalityName[SC.sub$Quantity < 6]
-PS.remove <- PS.sub$LocalityName[PS.sub$Quantity < 6]
-SA.remove <- SA.sub$LocalityName[SA.sub$Quantity < 6]
+u#nique(density$LocalityName) 
+SC.remove <- SC.sub$LocalityName[SC.sub$Q_circle < 6]
+PS.remove <- PS.sub$LocalityName[PS.sub$Q_circle < 6]
+SA.remove <- SA.sub$LocalityName[SA.sub$Q_circle < 6]
 
 SC <- SC[!SC$LocalityName %in% SC.remove, ]
 PS <- PS[!PS$LocalityName %in% PS.remove, ]
 SA <- SA[!SA$LocalityName %in% SA.remove, ]
 
-unique(SC$LocalityName)                         # 28 locations
+unique(SC$LocalityName)                         # 18 locations
 unique(SC$LocalityName[SC$Region=="Trøndelag"]) # 11 locations
 unique(SC$LocalityName[SC$Region=="Telemark"])  # 7 locations
-unique(SC$LocalityName[SC$Region=="Hedmark"])   # 10 locations
+#unique(SC$LocalityName[SC$Region=="Hedmark"])   # 10 locations
 
-unique(BP$LocalityName) # 47 locations
+unique(BP$LocalityName) # 31 locations
 unique(BP$LocalityName[BP$Region=="Trøndelag"]) # 15 locations
 unique(BP$LocalityName[BP$Region=="Telemark"])  # 16 locations
-unique(BP$LocalityName[BP$Region=="Hedmark"])   # 16 locations
+#unique(BP$LocalityName[BP$Region=="Hedmark"])   # 16 locations
 
-unique(PS$LocalityName)                         # 40 locations
+unique(PS$LocalityName)                         # 26 locations
 unique(PS$LocalityName[PS$Region=="Trøndelag"]) # 12 locations
 unique(PS$LocalityName[PS$Region=="Telemark"])  # 14 locations
-unique(PS$LocalityName[PS$Region=="Hedmark"])   # 14 locations
+#unique(PS$LocalityName[PS$Region=="Hedmark"])   # 14 locations
 
-unique(PA$LocalityName) # 47 locations
+unique(PA$LocalityName) # 31 locations
 
-unique(SA$LocalityName) # 43 locations
+unique(SA$LocalityName) # 30 locations
 unique(SA$LocalityName[SA$Region=="Trøndelag"]) # 15 locations
 unique(SA$LocalityName[SA$Region=="Telemark"])  # 15 locations
-unique(SA$LocalityName[SA$Region=="Hedmark"])   # 13 locations
+#unique(SA$LocalityName[SA$Region=="Hedmark"])   # 13 locations
 
 rm(SC.sub, PA.sub, PS.sub, BP.sub, SA.sub)
 
 
 # creating  big datasets # filling in the zeros with aggregate (drop = F)
 SA2 <- aggregate(data = SA,
-                      Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                      Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                       FUN = sum, drop = F) 
 PA2 <- aggregate(data = PA,
-                 Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                 Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                  FUN = sum, drop = F)
 PS2 <- aggregate(data = PS,
-                 Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                 Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                  FUN = sum, drop = F)
 BP2 <- aggregate(data = BP,
-                 Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                 Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                  FUN = sum, drop = F)
 SC2 <- aggregate(data = SC,
-                 Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                 Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                  FUN = sum, drop = F)
 #par(mfrow=c(3,2))
 #hist(SA2$Quantity)
@@ -220,7 +223,16 @@ SC2 <- aggregate(data = SC,
 #hist(BP2$Quantity)
 #hist(SC2$Quantity)
 
+#table(SA2$LocalityName, SA2$yse, SA2$fH)
+# zeros are added correctly - dataset is balanced.
 
+
+# need to add Region back in:
+SA2$Region <- density$Region[match(SA2$LocalityName, density$LocalityName)]
+PA2$Region <- density$Region[match(PA2$LocalityName, density$LocalityName)]
+PS2$Region <- density$Region[match(PS2$LocalityName, density$LocalityName)]
+BP2$Region <- density$Region[match(BP2$LocalityName, density$LocalityName)]
+SC2$Region <- density$Region[match(SC2$LocalityName, density$LocalityName)]
 
 
 
@@ -234,8 +246,7 @@ SC2 <- aggregate(data = SC,
 
 #sorbus
 SA2.2 <- aggregate(data = SA2,
-                 Quantity~LocalityName+Treatment+yse+fH,
-                 FUN = mean)
+                 Quantity~LocalityName+Treatment+yse+fH, FUN = mean)
 SA2.2 <- SA2.2[SA2.2$yse==7,]   # showing only year 7 after exclosure
 SA2.2$cH <- as.character(SA2.2$fH)
 SA2.2$nH <- as.numeric(SA2.2$cH)
@@ -279,7 +290,7 @@ SC2.2$Quantity[SC2.2$Treatment == "B"] <- SC2.2$Quantity[SC2.2$Treatment == "B"]
 #summary(SC2.2$Quantity)
 #hist(SC2.2$Quantity)
 
-)
+
 
 
 
@@ -344,11 +355,13 @@ SC2.2$Quantity[SC2.2$Treatment == "B"] <- SC2.2$Quantity[SC2.2$Treatment == "B"]
     theme(plot.title = element_text(hjust = 0.5))+
     ggtitle("Goat willow 7 years after exclosure")+coord_flip())
 
+# Goat willow is quite rare.
+
 #tiff("age_distribution_year7_per_locations.tiff", height = 35, width = 20, units = "cm", res = 300)
 grid.draw(rbind(ggplotGrob(Supp_SA), ggplotGrob(Supp_PA), 
                 ggplotGrob(Supp_PS), ggplotGrob(Supp_BP),ggplotGrob(Supp_SC),
                 size = "last"))
-dev.off()
+#dev.off()
 # END supp figure####
 
 
@@ -382,6 +395,7 @@ SC3 <- aggregate(data = SC2,
 #hist(PS3$Quantity)
 #hist(BP3$Quantity)
 #hist(SC3$Quantity)
+#table(SA3$Treatment, SA3$yse, SA3$fH)
 
 
 # DONT RUN!!! (unless making supplementary figure)
@@ -472,9 +486,9 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                      breaks = c(1, 2, 3, 4, 5, 6, 7),
                      labels=c("25","75","125", "175", "225", "275", ">300"))+
   scale_y_continuous(name = "Mean number of trees per hectare",
-                   breaks = c(-500,0, 500),
-                   labels=c("500","0", "500"),
-                   limits=c(-800, 800))+
+                   breaks = c(-6000, -3000,0, 3000, 6000),
+                   labels=c("6000","3000", "0", "3000", "6000"),
+                   limits=c(-8000, 8000))+
   #scale_y_continuous(name = "Mean number of trees per hectare",
   #                    breaks = c(-1500, -1000,-500,0,500,1000, 1500),
   #                    labels=c("1500", "1000","500","0","500", "1000", "1500"),
@@ -485,7 +499,7 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                    plot.title = element_text(hjust = 0.5, size=22),
                    legend.key.size = unit(2,"line"),
                    legend.text=element_text(size=20))+
-  annotate("text", cex=7, label= "Rowan\nn=43", x=6, y=720) +      # all regions
+  annotate("text", cex=7, label= "Rowan\nn=30", x=6, y=7200) +      # all regions
   #annotate("text", cex=7, label= "Rowan\nn=15", x=6, y=1400) +      # Trøndelag
   #annotate("text", cex=7, label= "Rowan\nn=15", x=6, y=0.9) +      # Telemark
   #annotate("text", cex=7, label= "Rowan\nn=13", x=6, y=0.9) +      # Hedmark
@@ -510,15 +524,15 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
     scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-500,-0, 500),
-                       labels=c("500","0","500"),
-                       limits=c(-600, 600))+
+                       breaks = c(-4000, -2000, 0, 2000, 4000),
+                       labels=c("4000","2000", "0", "2000", "4000"),
+                       limits=c(-5000, 5000))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
     #                   breaks = c(-150,0, 150),
     #                   labels=c("150","0", "150"),
     #                   limits=c(-170, 170))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Spruce\nn=47", x=6, y=540) +       # all regions
+    annotate("text", cex=7, label= "Spruce\nn=31", x=6, y=4500)+        # all regions
     #annotate("text", cex=7, label= "Spruce\nn=15", x=6, y=140) +       # Trøndelag
     #annotate("text", cex=7, label= "Spruce\nn=16", x=6, y=0.7) +       # Telemark
     #annotate("text", cex=7, label= "Spruce\nn=16", x=6, y=0.7) +       # Hedmark
@@ -538,15 +552,15 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
     scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-500,0,500),
-                       labels=c("500","0","500"),
-                       limits=c(-500, 500))+
+                       breaks = c(-3000, -1500, 0, 1500, 3000),
+                       labels=c("3000", "1500", "0", "1500", "3000"),
+                       limits=c(-4000, 4000))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
     #                   breaks = c(-800,-400,0, 400,800),
     #                   labels=c("800","400","0", "400", "800"),
     #                   limits=c(-1000, 1000))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Pine\nn=40", x=6, y=450) +       # all regions
+    annotate("text", cex=7, label= "Pine\nn=26", x=6, y=3600) +       # all regions
     #annotate("text", cex=7, label= "Pine\nn=12", x=6, y=800) +       # Trøndelag
     #annotate("text", cex=7, label= "Pine\nn=14", x=6, y=0.5) +       # Telemark
     #annotate("text", cex=7, label= "Pine\nn=14", x=6, y=0.5) +       # Hedmark
@@ -566,15 +580,15 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
     scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-200, 0, 200),
-                       labels=c("200","0","200"),
-                       limits=c(-300, 300))+
+                       breaks = c(-2000, -1000, 0, 1000, 2000),
+                       labels=c("2000","1000","0","1000","2000"),
+                       limits=c(-2400, 2400))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
     #                   breaks = c(-500, 0, 500),
     #                   labels=c("500","0","500"),
     #                   limits=c(-600, 600))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Birch sp\nn=47", x=6, y=270) +     #all Regions
+    annotate("text", cex=7, label= "Birch spp\nn=31", x=6, y=2160) +     #all Regions
     #annotate("text", cex=7, label= "Birch sp\nn=15", x=6, y=500) +     #Trøndelag  
     #annotate("text", cex=7, label= "Birch sp\nn=16", x=6, y=0.3) +     #Telemark
     #annotate("text", cex=7, label= "Birch sp\nn=16", x=6, y=0.3) +     #Hedmark
@@ -594,15 +608,15 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
     scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-100,0, 100),
-                       labels=c("100","0", "100"),
-                       limits=c(-150, 150))+
+                       breaks = c(-600,0, 600),
+                       labels=c("600","0", "600"),
+                       limits=c(-600, 600))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
     #                   breaks = c(-200,0, 200),
     #                   labels=c("200","0", "200"),
     #                   limits=c(-300, 300))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Goat willow\nn=28", x=6, y=125) +   # All Regions
+    annotate("text", cex=7, label= "Goat willow\nn=18", x=6, y=540) +   # All Regions
     #annotate("text", cex=7, label= "Goat willow\nn=11", x=6, y=250) +    # Trøndelag
     #annotate("text", cex=7, label= "Goat willow\nn=28", x=6, y=0.15) +   # Telemark
     #annotate("text", cex=7, label= "Goat willow\nn=28", x=6, y=0.15) +   # Hedmark
@@ -617,57 +631,62 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
 
 getwd()
 setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
-#tiff("demography_plot.tiff", height = 35, width = 20, units = "cm", res = 300)
+
+tiff("demography_plot.tiff", height = 35, width = 20, units = "cm", res = 300)
 #tiff("demography_plot_Trondelag.tiff", height = 35, width = 20, units = "cm", res = 300)
 #tiff("demography_plot_Telemark.tiff", height = 35, width = 20, units = "cm", res = 300)
 #tiff("demography_plot_Hedmark.tiff", height = 35, width = 20, units = "cm", res = 300)
 grid.draw(rbind(ggplotGrob(SA_fig), 
                 ggplotGrob(PA_fig), 
                 ggplotGrob(PS_fig), 
-                ggplotGrob(BP_fig), 
-                ggplotGrob(SC_fig),  
+                ggplotGrob(BP_fig),  
                 size = "last"))
 dev.off()
-
 
            
 
 
 # BOXplot #### 
-#of last treatment year
+# Large trees (>2m)
+# of last treatment year
+
 
 #organize data
+# average accross the four circles
 SAbox <- aggregate(data = subset(SA2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
+                   Quantity~Region+LocalityName+Treatment+yse+fH,
                    FUN = mean)
 SAbox$taxa <- "Rowan"
 PAbox <- aggregate(data = subset(PA2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
+                   Quantity~Region+LocalityName+Treatment+yse+fH,
                    FUN = mean)
 PAbox$taxa <- "Spruce"
 PSbox <- aggregate(data = subset(PS2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
+                   Quantity~Region+LocalityName+Treatment+yse+fH,
                    FUN = mean)
 PSbox$taxa <- "Pine"
 BPbox <- aggregate(data = subset(BP2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
+                   Quantity~Region+LocalityName+Treatment+yse+fH,
                    FUN = mean)
 BPbox$taxa <- "Birch"
-SCbox <- aggregate(data = subset(SC2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
-                   FUN = mean)
-SCbox$taxa <- "Goat willow"
+#SCbox <- aggregate(data = subset(SC2, yse == 7 & as.character(fH) > 4),
+#                   Quantity~LocalityName+Treatment+yse+fH,
+#                   FUN = mean)
+#SCbox$taxa <- "Goat willow"
 
-BPdat <- rbind(SAbox, PAbox, PSbox, BPbox, SCbox)
+
+# Bind it together
+BPdat <- rbind(SAbox, PAbox, PSbox, BPbox)
 head(BPdat)
 BPdat2 <- aggregate(data=BPdat, 
-                    Quantity~LocalityName+Treatment+taxa,
+                    Quantity~Region+LocalityName+Treatment+taxa,
                     FUN = sum)
-head(BPdat2, 20)
-tail(BPdat2, 20)
+#head(BPdat2, 20)
+#tail(BPdat2, 20)
 
 
-BPdat3 <- dcast(BPdat2, LocalityName+taxa~Treatment, value.var = "Quantity", FUN = mean)
+# get treatment difference
+BPdat3 <- dcast(BPdat2, Region+LocalityName+taxa~Treatment, value.var = "Quantity", FUN = mean)
 BPdat3$diff <- BPdat3$UB-BPdat3$B
 head(BPdat3,20)
 BPdat3$taxa <- as.factor(BPdat3$taxa)
@@ -676,59 +695,73 @@ levels(BPdat3$taxa)
 BPdat3$taxa <- factor(BPdat3$taxa,
                        levels = c('Spruce',
                                   'Pine',
-                                  'Goat willow',
                                   'Birch',
                                   'Rowan'),ordered = TRUE)
-#tiff("large_trees_boxplot.tiff", height = 15, width = 25, units = "cm", res = 300)
-ggplot(BPdat3, aes(x = taxa, y = diff))+
+
+
+# get mean and standard error of the mean
+
+mean <- c(mean(BPdat3$diff[BPdat3$taxa=="Spruce"]),
+          mean(BPdat3$diff[BPdat3$taxa=="Birch"]),
+          mean(BPdat3$diff[BPdat3$taxa=="Pine"]),
+          mean(BPdat3$diff[BPdat3$taxa=="Rowan"]))
+se <-  c(sd(BPdat3$diff[BPdat3$taxa=="Rowan"])/sqrt(nrow(subset(BPdat3, taxa == "Spruce"))),
+         sd(BPdat3$diff[BPdat3$taxa=="Rowan"])/sqrt(nrow(subset(BPdat3, taxa == "Birch"))),
+         sd(BPdat3$diff[BPdat3$taxa=="Rowan"])/sqrt(nrow(subset(BPdat3, taxa == "Pine"))),
+         sd(BPdat3$diff[BPdat3$taxa=="Rowan"])/sqrt(nrow(subset(BPdat3, taxa == "Rowan"))))
+forest <- data.frame(mean, se)
+forest$upper <- mean+se
+forest$lower <- mean-se
+forest$taxa <- c("Spruce", "Birch", "Pine", "Rowan")
+
+
+
+tiff("large_trees_boxplot.tiff", height = 15, width = 30, units = "cm", res = 300)
+ggplot(BPdat3[BPdat3$diff<3000,], aes(x = taxa, y = diff))+
   theme_classic()+
   coord_flip()+
   geom_hline(yintercept=0)  +
   geom_violin(colour = "black",fill = "grey80", alpha=0.1, scale = "width")+
-  #geom_dotplot(binaxis='y', stackdir='center', binwidth = 1,
-   #            position=position_dodge(0.5), dotsize = 0.2)+
   geom_jitter(shape=16, position=position_jitter(0.2), colour="grey", fill = "grey")+
-  stat_summary(fun.y=mean, geom="point", shape=16, size=3, colour="red")+
-  stat_summary(fun.y=median, geom="point",  shape=17, size=3, colour="black")+
-  xlab("")+ylab("Differences in mean number of large trees per hectare\n(exclosure minus open plot)")
-#dev.off()  
-  
+  geom_pointrange(data=forest, aes(x = taxa, y=mean, ymin=lower, ymax=upper), size =1.2 )+
+  ylim(c(-1800,3000))+
+  xlab("")+ylab("Differences in mean number of large trees per hectare\n(exclosure minus open plot)")+
+  annotate("text", x=4, y= -1600, label="z = 16.91\nobs = 30\np<<0.001")+
+  annotate("text", x=3, y= -1600, label="z = \nobs = \np =")+
+  annotate("text", x=2, y= -1600, label="z = \nobs = \np =")+
+  annotate("text", x=1, y= -1600, label="z = \nobs = \np =")+
+  annotate("text", x=4, y= 3000, label="5371\n4177\n6963", size=3)
+dev.off()  
+# cut tail on rowan plot !!3!! extreme points 
+BPdat3[BPdat3$diff>3000,]  #  5371.479, 4177.817, 6963.029
+
+#stat_summary(fun.y=mean, geom="point", shape=16, size=3, colour="red")+
+#stat_summary(fun.y=median, geom="point",  shape=17, size=3, colour="black")+
 
 
 # LMM   #####
-#organize data
-#organize data
-SAlmm <- aggregate(data = subset(SA2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+Plot,
-                   FUN = sum)
-SAlmm$taxa <- "Rowan"
-# No variation in one of the groups (Open plots)!
-ggplot()+geom_boxplot(data = SAlmm, aes(x=Treatment, y = log(SAlmm$Quantity+1)))
-tapply( SAlmm$Quantity, SAlmm$Treatment, FUN = mean)
-# Option 1: turn data into bernoulli responces
+# Problem: No or very little variation in the Open plots
+# # Solution : use 'diff' as responce and test if intercept != 0
 
-PAbox <- aggregate(data = subset(PA2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
-                   FUN = mean)
-PAbox$taxa <- "Spruce"
-PSbox <- aggregate(data = subset(PS2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
-                   FUN = mean)
-PSbox$taxa <- "Pine"
-BPbox <- aggregate(data = subset(BP2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
-                   FUN = mean)
-BPbox$taxa <- "Birch"
-SCbox <- aggregate(data = subset(SC2, yse == 7 & as.character(fH) > 4),
-                   Quantity~LocalityName+Treatment+yse+fH,
-                   FUN = mean)
-SCbox$taxa <- "Goat willow"
 
-BPdat <- rbind(SAbox, PAbox, PSbox, BPbox, SCbox)
-head(BPdat)
-BPdat2 <- aggregate(data=BPdat, 
-                    Quantity~LocalityName+Treatment+taxa,
-                    FUN = sum)
+# ROWAN
+# strictly positive, right skew, continous data (averages over 4 circles) - gamma
+# log(mu_i) = Intercept 
+library(glmmTMB)
+
+#hist(BPdat3$diff[BPdat3$taxa=="Rowan"])
+#View(subset(BPdat3, taxa == "Rowan"))
+#summary(BPdat3$diff[BPdat3$taxa=="Rowan"])
+SAlmm <- glmmTMB(diff+0.001 ~ 1 +(1|Region), data = subset(BPdat3, taxa == "Rowan"), family = Gamma(link = "log"))
+#E1 <- resid(SAlmm, type = "pearson")
+#F1  <- fitted(SAlmm)
+#plot(F1, E1)
+summary(SAlmm)
+
+exp(SAlmm$fit$par[1])
+mean(BPdat3$diff[BPdat3$taxa=="Rowan"])
+sd(BPdat3$diff[BPdat3$taxa=="Rowan"])/sqrt(nrow(subset(BPdat3, taxa == "Rowan")))
+
 
 
 

@@ -433,14 +433,35 @@ FG3 <- melt(data = FG2, id.vars = names(FG2[,1:5]), measure.vars = names(FG2[,6:
 names(FG3)[names(FG3) == "variable"] <- "group"
 names(FG3)[names(FG3) == "value"]    <- "biomass"
 
-FG4 <- aggregate(data=FG3, biomass~yse+Treatment+group, FUN = mean)
+FG4 <- aggregate(data=FG3, biomass~yse+Treatment+LocalityName+group, FUN = mean)
+table(FG4$LocalityName, FG4$yse, FG4$group)
 
-ggplot(data = FG4, aes(x=yse, y= biomass, group=group, colour=group))+
-  geom_line()+theme_bw()+
-  facet_grid(. ~ Treatment, scales = "fixed")
+library(gridExtra)
+tiff("Functional_groups_gridarrange.tiff", height = 40, width = 12, units = "cm", res=300)
+grid.arrange(
+ggplot(data = FG4[FG4$group=="grasses",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+ #geom_point(aes(shape=Treatment))+
+  theme_bw()+ggtitle("Grasses")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
+ggplot(data = FG4[FG4$group=="large_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
+  theme_bw()+ggtitle("Large herbs")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
+ggplot(data = FG4[FG4$group=="small_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
+  theme_bw()+ggtitle("Small herbs")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
+ggplot(data = FG4[FG4$group=="ferns",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
+  theme_bw()+ggtitle("Ferns")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
+ggplot(data = FG4[FG4$group=="shrubs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
+  theme_bw()+ggtitle("Dwarf shrubs")+guides(linetype = FALSE)+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
+ncol=1
+)
+dev.off()
 
 FG5 <- dcast(FG4, yse+group~Treatment, value.var = "biomass", fun.aggregate = mean)
 FG5$diff <- FG5$UB-FG5$B
+
+
 ggplot(data = FG5, aes(x=yse, y= diff, group=group, colour=group, linetype= group))+
   geom_line(size=2)+theme_bw()+geom_hline(yintercept = 0, size=2)+
   xlab("Years since exclosure")+ylab("Grams of biomass (Exclosure - open plots)")+
@@ -464,6 +485,7 @@ ggplot(data = FG7, aes(x=yse, y= diff))+
   theme(legend.title=element_blank())+
   facet_wrap( ~ group, scales = "free")
 #dev.off()
+
 
 #tiff("Functional_groups_onePlot.tiff", height = 10, width = 10, units = "cm", res=300)
 ggplot(data = FG7, aes(x=yse, y= diff, group = group, colpur = group))+
@@ -533,7 +555,7 @@ TH_glm <- lme(log(biomass+1) ~ Treatment*yse, random = ~1|Region/LocalityName,
 
 
 
-# PRC
+# PRC   ###
 library(vegan)
 
 cdatBM[is.na(cdatBM)] <- 0
@@ -780,6 +802,381 @@ prc.out.location <- prc(PRCdat[,16:ncol(PRCdat)], as.factor(PRCdat$LocalityName)
                       as.factor(PRCdat$yse))
 sum_mod_prc3 <- summary(prc.out.location, scaling = 2)
 plot(prc.out.location, select = abs(sum_mod_prc3$sp)>0.1, scaling = 2, legpos = NA)
+
+
+
+
+# VEGDIST ####
+
+# betadiversity and how it changes with time since exlosure
+
+head(wide)
+library(vegan)
+
+pairs <- interaction(wide2$LocalityName, wide2$yse, wide2$Treatment)
+dist_out <- cbind(pairs, wide2)
+dist_out2 <- NULL
+
+for(i in unique(dist_out$pairs)){
+  temp <- vegdist(x = subset(dist_out[,6:ncol(dist_out)], pairs == i), method="jaccard")  
+  temp2 <- cbind( 
+                 unique(dist_out$Region[dist_out$pairs == i]),             
+                 unique(dist_out$LocalityName[dist_out$pairs == i]), 
+                 unique(dist_out$yse[dist_out$pairs == i]),
+                 unique(dist_out$Treatment[dist_out$pairs == i]),
+                 mean(as.numeric(temp))
+                 )
+  dist_out2 <- rbind(dist_out2, temp2)
+}
+
+class(dist_out2)
+dist_out3 <- data.frame(dist_out2)
+names(dist_out3) <- c("Region", "LocalityName", "yse", "Treatment", "Jaccard")
+dist_out3$nJaccard <- as.numeric(as.character(dist_out3$Jaccard))
+levels(dist_out3$Treatment)[levels(dist_out3$Treatment) == "B"] <- "Open plots"
+levels(dist_out3$Treatment)[levels(dist_out3$Treatment) == "UB"] <- "Exclosures"
+
+
+#dist_out3$dups <- interaction(dist_out3$LocalityName, dist_out3$yse)
+#dist_out3.2 <- dist_out3[!duplicated(dist_out3$dups),]
+
+#tiff("Jaccard_interaction.tiff", width = 15, height = 15, res=300, units="cm")  
+ggplot(data = dist_out3, aes(x=as.numeric(yse), y=nJaccard,
+                             group = Treatment, colour = Treatment))+
+  theme_bw()+
+  #geom_point()+
+  geom_smooth(method = "lm", size = 1.5, fill = "grey70")+
+  xlab("Year since exclosure")+
+  ylab("Jaccard dissimilarity")+
+  theme(legend.justification=c(0.01,0.01), legend.position=c(0.01,0.01))
+#dev.off()
+#tiff("Jaccard_interaction_points.tiff", width = 15, height = 15, res=300, units="cm")  
+ggplot(data = dist_out3, aes(x=as.numeric(yse), y=nJaccard,
+                             group = Treatment, colour = Treatment))+
+  theme_bw()+
+  geom_point()+
+  geom_smooth(method = "lm", size = 1.5, fill = "grey70")+
+  xlab("Year since exclosure")+
+  ylab("Jaccard dissimilarity")+
+  theme(legend.justification=c(0.01,0.01), legend.position=c(0.01,0.01))
+#dev.off()
+
+
+# beta diversity is similar between treatments, but
+# possibly diverging....
+library(nlme)
+Jmod <- lme(data = dist_out3, nJaccard~as.numeric(yse)*Treatment,
+            random = ~1|Region/LocalityName)
+
+library(lme4)
+Jmod2 <- lmer(data = dist_out3, nJaccard~as.numeric(yse)*Treatment+
+            (1|Region/LocalityName))
+
+plot(Jmod)
+plot(dist_out3$yse, resid(Jmod))
+plot(dist_out3$Treatment, resid(Jmod))
+plot(dist_out3$LocalityName, resid(Jmod))
+plot(dist_out3$Region, resid(Jmod))
+
+
+summary(Jmod) # yes, significant interaction effect!
+summary(Jmod2) # this is better at showing random effects and calculating ICC
+
+
+
+# Jaccard and CCI ####
+# Is it related to canopy cover?
+# first we see is there's a treatment effect on the variation in CCI
+# by analysing standrad deviation. Then we do the same using actauall euclidian disntances
+
+
+# data from Trøndelag sites, in year 2016
+CCI <- read_excel("CanopyCover_SUSTHERB_export.xlsx", 
+                                          sheet = "SUSTHERB_export")
+# remove thinned sites
+unique(CCI$LocalityName)
+thinned <- c("Selbu_Flub" , "Hi_tydal", "Malvik" )
+CCI2 <- CCI[!CCI$LocalityName %in% thinned,]
+
+uniquePlot <- interaction(CCI2$LocalityName, CCI2$Treatment, CCI2$Plot)
+CCI3 <- cbind(uniquePlot, CCI2)
+CCI4 <- CCI3[CCI3$Plot != "Experiment area",]
+CCI5 <- aggregate(data = CCI4, CanopyCoverIndex~uniquePlot+LocalityName+Treatment+Plot, FUN =mean, na.rm=T)
+
+wide3 <- wide2[wide2$Region=="Trøndelag",]
+wide3 <- wide3[!wide3$LocalityName %in% thinned,]
+#unique(wide3$LocalityName)
+#unique(CCI4$LocalityName)
+wide3$CCI <- CCI5$CanopyCoverIndex[match(paste0(wide3$LocalityName, wide3$Treatment, wide3$Plot),
+                                         paste0(CCI5$LocalityName, CCI5$Treatment, CCI5$Plot))]
+
+# change order
+wide4 <- wide3[,c(ncol(wide3), 1:(ncol(wide3)-1))]
+
+
+loc_trt <- interaction(wide4$LocalityName, wide4$Treatment)
+wide5 <- cbind(loc_trt, wide4)
+wide6 <- wide5[!is.na(wide5$CCI),]
+# Euclidian distances
+
+# IM STUCK!
+
+EucD <- NULL
+for(i in unique(wide6$loc_trt)){
+  temp_dat <- subset(wide6, loc_trt ==i)
+  temp <- vegdist(temp_dat$CCI, method = "euclidean")
+  temp2 <- cbind(
+    unique(temp_dat$LocalityName),
+    unique(temp_dat$Treatment),
+    temp
+  )
+  EucD <- rbind(EucD, temp2)
+}
+
+EucD <- data.frame(EucD)
+names(EucD) <- c("LocalityName", "Treatment", "CCI_EucD")
+EucD$CCI_EucD <- as.numeric(as.character(EucD$CCI_EucD))
+boxplot(EucD$CCI_EucD~EucD$Treatment)
+
+
+
+
+
+
+library(nlme)
+mod_eucCCI <- lme(data = EucD, log(CCI_EucD+1)~Treatment, random = ~1|LocalityName)
+plot(mod_eucCCI)
+summary(mod_eucCCI)
+# gamma glmm ...
+
+
+
+
+
+
+SDs <- NULL
+for(i in unique(CCI4$loc_trt)){
+  temp_dat <- subset(CCI4, loc_trt ==i)
+  tempSD <- sd(temp_dat$CanopyCoverIndex, na.rm=T)
+  tempSD2 <- cbind(
+    unique(temp_dat$Region),
+    unique(temp_dat$LocalityName),
+    unique(temp_dat$Treatment),
+    tempSD
+  )
+  SDs <- rbind(SDs, tempSD2)
+}
+
+SDs <- data.frame(SDs)
+names(SDs) <- c("Region", "LocalityName", "Treatment", "CCI_SD")
+SDs$CCI_SD <- as.numeric(as.character(SDs$CCI_SD))
+boxplot(SDs$CCI_SD~SDs$Treatment)
+ModCCISD <- lme(data=SDs, CCI_SD~Treatment, random = ~1|LocalityName)
+plot(ModCCISD)
+summary(ModCCISD)
+# no effect - also low sample size
+
+# add productvity index...
+productivity_index_sustherbSites <- read.csv("M:/Anders L Kolstad/systherb data/exported cvs/productivity_index_sustherbSites.csv")
+SDs$PI <- productivity_index_sustherbSites$PI
+# ++++
+
+
+
+
+
+# Diveristy index ####
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+cdat <- read_excel("community_data.xlsx", 
+                   sheet = "SUSTHERB_export")
+
+
+
+# remove regions
+cdat <- cdat[cdat$Region=="Trøndelag" | cdat$Region=="Telemark",]
+
+# set data and year
+tail(cdat$'_Date')
+Date <- as.Date(cdat$`_Date`, format = c("%Y-%m-%d"))
+year <- format(Date, "%Y")
+cdat <- cbind(year, Date, cdat)
+head(cdat$year)
+
+
+# calculating year since exclosure (yse)
+yse <- ifelse(cdat$Region == "Trøndelag", as.numeric(as.character(cdat$year))-2008, 
+              as.numeric(as.character(cdat$year))-2009)
+cdat <- cbind(yse, cdat)
+table(cdat$Region, cdat$yse)
+table(cdat$LocalityName, cdat$Plot)
+cdat$Plot <- ifelse(cdat$Plot > 10, cdat$Plot-10, cdat$Plot)
+
+
+# remove some columns that are not vascular plant species
+other_types <- c("Bare ground",
+                 "Bare ground/branch", 
+                 "Bare ground-stone",
+                 "Bryophyta",
+                 "Cow shit",
+                 "Lichens",
+                 "Litter",
+                 "No occurrence",
+                 "Sphagnum sp",
+                 "Stone",
+                 "Not identified")
+trees <- c("Alnus incana",
+           "Betula pubescens",
+           "Quercus sp_",
+           "Salix caprea",
+           "Betula pendula",
+           "Corylus avellana",
+           "Picea abies",
+           "Pinus sylvestris",
+           "Populus tremula",
+           "Prunus padus",
+           "Sorbus aucuparia",
+           "Juniperus communis",
+           "Sambucus sp_")
+
+cdat <- cdat[,!colnames(cdat) %in% c(other_types, trees)]
+
+mosses <- c("Cirriphyllum piliferum",
+            "Dicranum sp",
+            "Hylocomiastrum umbratum",
+            "Hylocomium splendens",
+            "Marchantiophyta",
+            "Plagiochila asplenioides",
+            "Plagiomnium ellipticum",
+            "Plagiomnium undulatum",
+            "Plagiothecium laetum/curvifolium",
+            "Plagiothecium undulatum",
+            "Pleurozium schreberi",
+            "Polytrichum/-astrum",
+            "Ptilidium ciliare",
+            "Ptilium crista-castrensis",
+            "Rhodobryum roseum",
+            "Rhytidiadelphus loreus",
+            "Rhytidiadelphus squarrosus/subpinnatus",
+            "Rhytidiadelphus triquetrus",
+            "Sciuro-hypnum reflexum",
+            "Sciuro-hypnum starkei")
+
+
+
+
+
+
+# Turning all species into numeric
+to_be_numbers <- c(16:ncol(cdat))
+cdat[,to_be_numbers] <- as.numeric(as.character(unlist(cdat[,to_be_numbers])))
+summary(colSums(cdat[,16:ncol(cdat)], na.rm = T))
+
+
+# removing species with no records
+cdat <- cdat[,c(rep(TRUE, times = 15),
+                 colSums(cdat[,16:ncol(cdat)], na.rm = T) > 0)]
+
+
+# look for empty plots
+summary(rowSums(cdat[,16:ncol(cdat)], na.rm = T))  # obs - note some non-species at the end of df
+#View(cdat[rowSums(cdat[,9:ncol(cdat)], na.rm = T) == 0,])
+# Bjøllåa B plot 5 and Slindsvann UB plot 7 were not found in 2016 so data exists
+# assuming the same is tru for the rest
+cdat <- cdat[rowSums(cdat[,16:ncol(cdat)], na.rm = T) > 0,]
+
+
+# Balance? OK
+table(cdat$LocalityName, cdat$Treatment)
+cdat <- cdat[!(cdat$LocalityCode == "1RB" | cdat$LocalityCode == "1RUB"),]
+
+
+# removing 'observed' species and retaining only measured species
+# (more species are recorded for Trøndelag in 2016)
+cdat <- cdat[cdat$Method=="Point_Intercept",]
+
+
+
+# calculating biomass
+# run 'Species groups'
+
+cdatBM <- cdat   
+#cdatBM[,16:ncol(cdatBM)] <- NULL
+
+cdat[,16:ncol(cdat)] <- cdat[,16:ncol(cdat)]/16   # standardising the intercept frequency
+
+cdatBM[, BLS_taxa] <- cdat[, BLS_taxa]  * 74.4101   + 1.2857
+cdatBM[, NLS_taxa] <- cdat[, NLS_taxa]  * 74.184  + 9.2471
+cdatBM[, TH_taxa]  <- cdat[, TH_taxa]   * 36.4849 + 4.0373
+cdatBM[, SH_taxa]  <- cdat[, SH_taxa]   * 15.1209 + 0.7713
+cdatBM[, BLG_taxa] <- cdat[, BLG_taxa]  * 23.3885   + 0.6384
+cdatBM[, NLG_taxa] <- cdat[, NLG_taxa]  * 5.9653  + 0.8747
+
+
+
+# Vascular plant species 
+vasc_names <- names(cdatBM[,16:ncol(cdatBM)])[!names(cdatBM[,16:ncol(cdatBM)]) %in% mosses]
+
+# Total species richness
+SR <- rowSums(cdatBM[,16:ncol(cdatBM)]>0, na.rm=T)
+
+# Moss species richness (Trøndelag 2016 only)
+MSR <- rowSums(cdatBM[,names(cdatBM) %in% mosses]>0, na.rm=T)
+
+# Vascular plant species richness
+VSR <- rowSums(cdatBM[,names(cdatBM) %in% vasc_names]>0, na.rm=T)
+
+cdatBM <- cbind(SR, MSR, VSR, cdatBM)
+
+library(vegan)
+
+cdatBM[is.na(cdatBM)] <- 0
+Shannon_moss <- diversity(cdatBM[,mosses], index = "shannon")
+Shannon_vasc <- diversity(cdatBM[,vasc_names], index = "shannon")
+cdatBM <- cbind(Shannon_moss, Shannon_vasc, cdatBM)
+
+cdatBM_plot <- aggregate(data = cdatBM, cbind(SR,MSR,VSR, Shannon_vasc, Shannon_moss)~LocalityName+yse+Treatment, FUN = mean)
+
+tiff("Vasc_SR_and_shannon.tiff", height = 15, width = 10, res = 300, units = "cm")
+grid.arrange(
+ggplot(data = cdatBM_plot, aes(x = yse, group = Treatment, linetype = Treatment))+
+  #geom_point(aes(y=VSR, shape = Treatment))+
+  geom_smooth(aes(y=VSR), method = "lm", colour = "black")+
+  ylab("Vascular plant\nspecies richness") +xlab("")+
+  guides(linetype=FALSE, shape = FALSE),
+ggplot(data = cdatBM_plot, aes(x = yse, group = Treatment, linetype = Treatment))+
+  #geom_point(aes(y=Shannon_vasc, shape = Treatment))+
+  geom_smooth(aes(y=Shannon_vasc), method = "lm", colour = "black")+
+  ylab("Vascular plant\nShannon entropy") +xlab("Years since exclosure")+
+  guides(linetype=FALSE, shape = FALSE)
+, nrow=2)
+dev.off()
+
+cdatBM$fTreatment <- factor(cdatBM$Treatment)
+levels(cdatBM$fTreatment)[levels(cdatBM$fTreatment)=="B"] <- "Open plots"
+levels(cdatBM$fTreatment)[levels(cdatBM$fTreatment)=="UB"] <- "Exclosure"
+
+
+#tiff("Moss_SR_and_shannon.tiff", height = 15, width = 10, res = 300, units = "cm")
+
+grid.arrange(
+ggplot(data = subset(cdatBM, yse == 8 & Region =="Trøndelag"))+
+  theme_classic()+xlab("")+ylab("Bryophyte species richness")+
+  geom_boxplot(aes(x=fTreatment, y=MSR)),
+ggplot(data = subset(cdatBM, yse == 8 & Region =="Trøndelag"))+
+  theme_classic()+xlab("")+ylab("Bryophyte shannon entrophy")+
+  geom_boxplot(aes(x=fTreatment, y=Shannon_moss)))
+#dev.off()
+
+#ggplot(data = subset(cdatBM, yse == 8 & Region =="Trøndelag"))+
+#  theme_classic()+xlab("")+ylab("Bryophyte shannon entrophy")+
+#  geom_line(aes(x=fTreatment, y=Shannon_moss, group = LocalityName))
+
+
+cdatBM$Region <- factor(cdat$Region)
+cdatBM$Treatment <- factor(cdat$Treatment)
+cdatBM$fLocalityName <- factor(cdat$LocalityName)
+table(cdatBM$fLocalityName, cdat$yse)
+table(cdatBM$fLocalityName, cdat$Plot)
 
 
 

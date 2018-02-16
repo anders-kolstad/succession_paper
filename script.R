@@ -1,42 +1,25 @@
+# Top ####
 # Script for forest succession paper Anders L Kolstad
 
 # Overview
 
-# 1   -  tree heigth and denity
+# Want to show tree heigth and density
  # problem that max height is 3 m. This makes it impossible to use heigth or biomass
 
-# 1.1  - Age distribution over time
- # vertical plot with exclosure to one side and open plots on the other. First and last year shaded, 
- # other years just lines
+#  Solutoin, Age distribution over time
+ # vertical plot with exclosure to one side and open plots on the other. 
 
 
-
-
-
-
-# 1 tree height and density ####
-
-# I want to plot the height of the tallest tree inside each circle against time.
-# To do this I use the density dataset (obs - max height class?).
-# I can first plot a seperate line per treatment, and then possibly a treatment effect plot.
-# One pane per tree species. 
-# Final plot with treatment differences for all species combined (no error ribbon)
-
-# I want to plot seedling density density in the same way.
-# Supplementary plots include seperate lines per site.
-
-
-
-# 1.1 ####
-
-# Library
+# Library #####
 library(readxl)
 library(dplyr)
 library(ggplot2)
 library(gridExtra)
 library(grid)
 library(reshape2)
-# data
+
+
+# data ####
 density <- read_excel("density.xlsx", sheet = "Sheet1")
 
 
@@ -166,7 +149,7 @@ SA.sub <- aggregate(data = SA,
 #text(as.factor(SA.sub$LocalityName), SA.sub$Q_circle, label=SA.sub$Q_circle)
 
 
-u#nique(density$LocalityName) 
+# unique(density$LocalityName) 
 SC.remove <- SC.sub$LocalityName[SC.sub$Q_circle < 6]
 PS.remove <- PS.sub$LocalityName[PS.sub$Q_circle < 6]
 SA.remove <- SA.sub$LocalityName[SA.sub$Q_circle < 6]
@@ -216,6 +199,7 @@ BP2 <- aggregate(data = BP,
 SC2 <- aggregate(data = SC,
                  Quantity~LocalityName+Treatment+Plot+yse+Taxa+fH,
                  FUN = sum, drop = F)
+#table(SA2$LocalityName)
 #par(mfrow=c(3,2))
 #hist(SA2$Quantity)
 #hist(PA2$Quantity)
@@ -405,62 +389,70 @@ levels(density$Region)
 # run one region at the time and make figures below.
 MyRegion <- "Trøndelag"
 MyRegion <- "Telemark"
-MyRegion <- "Hedmark"
+#MyRegion <- "Hedmark"
 
-SA3 <- aggregate(data = subset(SA2, Region == MyRegion),
+
+thinned <- c("Hi_tydal", "Malvik", "Selbu_Flub")
+SA2x <- SA2[!SA2$LocalityName %in% thinned,]
+PA2x <- PA2[!PA2$LocalityName %in% thinned,]
+PS2x <- PS2[!PS2$LocalityName %in% thinned,]
+BP2x <- BP2[!BP2$LocalityName %in% thinned,]
+
+SA3 <- aggregate(data = subset(SA2x, Region == MyRegion),
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
-PA3 <- aggregate(data = subset(PA2, Region == MyRegion),
+PA3 <- aggregate(data = subset(PA2x, Region == MyRegion),
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
-PS3 <- aggregate(data = subset(PS2, Region == MyRegion),
+PS3 <- aggregate(data = subset(PS2x, Region == MyRegion),
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
-BP3 <- aggregate(data = subset(BP2, Region == MyRegion),
+BP3 <- aggregate(data = subset(BP2x, Region == MyRegion),
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
-SC3 <- aggregate(data = subset(SC2, Region == MyRegion),
-                 Quantity~Treatment+yse+fH,
-                 FUN = mean)
+#SC3 <- aggregate(data = subset(SC2x, Region == MyRegion),
+#                 Quantity~Treatment+yse+fH,
+#                 FUN = mean)
 
 # End of ' dont run'
 
-
+table(SA3$yse)
 
 
 range <- c(1,4,7)
 
 SA3$cH <- as.character(SA3$fH)
 SA3$nH <- as.numeric(SA3$cH)
-SA3 <- SA3[SA3$yse<9,]
+#SA3 <- SA3[SA3$yse<9,]
 SA3$fyse <- as.factor(SA3$yse)
 SA3 <- SA3[SA3$fyse %in% range,]
+table(SA3$yse)
 SA3$Quantity[SA3$Treatment == "B"] <- SA3$Quantity[SA3$Treatment == "B"]*(-1)
 
 PA3$cH <- as.character(PA3$fH)
 PA3$nH <- as.numeric(PA3$cH)
-PA3 <- PA3[PA3$yse<9,]
+#PA3 <- PA3[PA3$yse<9,]
 PA3$fyse <- as.factor(PA3$yse)
 PA3 <- PA3[PA3$fyse %in% range,]
 PA3$Quantity[PA3$Treatment == "B"] <- PA3$Quantity[PA3$Treatment == "B"]*(-1)
 
 PS3$cH <- as.character(PS3$fH)
 PS3$nH <- as.numeric(PS3$cH)
-PS3 <- PS3[PS3$yse<9,]
+#PS3 <- PS3[PS3$yse<9,]
 PS3$fyse <- as.factor(PS3$yse)
 PS3 <- PS3[PS3$fyse %in% range,]
 PS3$Quantity[PS3$Treatment == "B"] <- PS3$Quantity[PS3$Treatment == "B"]*(-1)
 
 BP3$cH <- as.character(BP3$fH)
 BP3$nH <- as.numeric(BP3$cH)
-BP3 <- BP3[BP3$yse<9,]
+#BP3 <- BP3[BP3$yse<9,]
 BP3$fyse <- as.factor(BP3$yse)
 BP3 <- BP3[BP3$fyse %in% range,]
 BP3$Quantity[BP3$Treatment == "B"] <- BP3$Quantity[BP3$Treatment == "B"]*(-1)
 
 SC3$cH <- as.character(SC3$fH)
 SC3$nH <- as.numeric(SC3$cH)
-SC3 <- SC3[SC3$yse<9,]
+#SC3 <- SC3[SC3$yse<9,]
 SC3$fyse <- as.factor(SC3$yse)
 SC3 <- SC3[SC3$fyse %in% range,]
 SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
@@ -482,31 +474,34 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                     values= c("7" = "red", "4" = "grey60", "1" = "grey100"))+
   scale_linetype_manual(name= "Years since exclosure",
                          values= c("7" = "solid", "4" = "longdash", "1" = "dotted"))+
-  scale_x_continuous(name = "Tree heigth (cm)",
+  scale_x_continuous(name = "Tree height (cm)",
                      breaks = c(1, 2, 3, 4, 5, 6, 7),
                      labels=c("25","75","125", "175", "225", "275", ">300"))+
-  scale_y_continuous(name = "Mean number of trees per hectare",
-                   breaks = c(-6000, -3000,0, 3000, 6000),
-                   labels=c("6000","3000", "0", "3000", "6000"),
-                   limits=c(-8000, 8000))+
   #scale_y_continuous(name = "Mean number of trees per hectare",
-  #                    breaks = c(-1500, -1000,-500,0,500,1000, 1500),
-  #                    labels=c("1500", "1000","500","0","500", "1000", "1500"),
-  #                   limits= c(-1600, 1600))+
+  #                 breaks = c(-6000, -3000,0, 3000, 6000),
+  #                 labels=c("6000","3000", "0", "3000", "6000"),
+  #                 limits=c(-8000, 8000))+
+  #scale_y_continuous(name = "Mean number of trees per hectare",
+   #                   breaks = c(-8000, -4000,0,4000,8000),
+    #                  labels=c("8000", "4000","0","4000", "8000"),
+     #                limits= c(-11000, 11000))+
+   scale_y_continuous(name = "Mean number of trees per hectare",
+                      breaks = c(-4000, -2000,0,2000,4000),
+                      labels=c("4000", "2000","0","2000", "4000"),
+                      limits= c(-6000, 6000))+
   theme_bw()+theme(legend.justification=c(0,1), 
                    legend.position=c(0,1),
                    legend.background = element_rect(fill=NA),
                    plot.title = element_text(hjust = 0.5, size=22),
                    legend.key.size = unit(2,"line"),
                    legend.text=element_text(size=20))+
-  annotate("text", cex=7, label= "Rowan\nn=30", x=6, y=7200) +      # all regions
-  #annotate("text", cex=7, label= "Rowan\nn=15", x=6, y=1400) +      # Trøndelag
-  #annotate("text", cex=7, label= "Rowan\nn=15", x=6, y=0.9) +      # Telemark
-  #annotate("text", cex=7, label= "Rowan\nn=13", x=6, y=0.9) +      # Hedmark
+  #annotate("text", cex=7, label= "Rowan\nn=30", x=6, y=7200) +      # all regions
+  #annotate("text", cex=7, label= "Rowan\nn=12", x=6, y=8000) +      # Trøndelag
+  annotate("text", cex=7, label= "Rowan\nn=15", x=6, y=5000) +      # Telemark
   coord_flip()+
-  ggtitle("Open plots | Exclosures")
+  #ggtitle("Open plots | Exclosures")
   #ggtitle("Trøndelag region\nOpen plots | Exclosures")
-  #ggtitle("Telemark region\nOpen plots | Exclosures")
+  ggtitle("Telemark region\nOpen plots | Exclosures")
   #ggtitle("Hedmark region\nOpen plots | Exclosures")
 )
 
@@ -520,21 +515,25 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                       values= c("7" = "red", "4" = "grey60", "1" = "grey100"))+
     scale_linetype_manual(name= "Years since exclosure",
                           values= c("7" = "solid", "4" = "longdash", "1" = "dotted"))+
-    scale_x_continuous(name = "Tree heigth (cm)",
+    scale_x_continuous(name = "Tree height (cm)",
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
-    scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-4000, -2000, 0, 2000, 4000),
-                       labels=c("4000","2000", "0", "2000", "4000"),
-                       limits=c(-5000, 5000))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
-    #                   breaks = c(-150,0, 150),
-    #                   labels=c("150","0", "150"),
-    #                   limits=c(-170, 170))+
+    #                   breaks = c(-4000, -2000, 0, 2000, 4000),
+    #                   labels=c("4000","2000", "0", "2000", "4000"),
+    #                   limits=c(-5000, 5000))+
+    #scale_y_continuous(name = "Mean number of trees per hectare",
+     #                  breaks = c(-1000,0, 1000),
+      #                 labels=c("1000","0", "1000"),
+       #                limits=c(-1300, 1300))+
+    scale_y_continuous(name = "Mean number of trees per hectare",
+                       breaks = c(-8000, -4000, 0, 4000, 8000),
+                       labels=c("8000","4000", "0", "4000", "8000"),
+                       limits=c(-10000, 10000))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Spruce\nn=31", x=6, y=4500)+        # all regions
-    #annotate("text", cex=7, label= "Spruce\nn=15", x=6, y=140) +       # Trøndelag
-    #annotate("text", cex=7, label= "Spruce\nn=16", x=6, y=0.7) +       # Telemark
+    #annotate("text", cex=7, label= "Spruce\nn=31", x=6, y=4500)+        # all regions
+    #annotate("text", cex=7, label= "Spruce\nn=12", x=6, y=1000) +       # Trøndelag
+    annotate("text", cex=7, label= "Spruce\nn=16", x=6, y=9000) +       # Telemark
     #annotate("text", cex=7, label= "Spruce\nn=16", x=6, y=0.7) +       # Hedmark
     coord_flip()
 )
@@ -548,21 +547,25 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                       values= c("7" = "red", "4" = "grey60", "1" = "grey100"))+
     scale_linetype_manual(name= "Years since exclosure",
                           values= c("7" = "solid", "4" = "longdash", "1" = "dotted"))+
-    scale_x_continuous(name = "Tree heigth (cm)",
+    scale_x_continuous(name = "Tree height (cm)",
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
-    scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-3000, -1500, 0, 1500, 3000),
-                       labels=c("3000", "1500", "0", "1500", "3000"),
-                       limits=c(-4000, 4000))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
-    #                   breaks = c(-800,-400,0, 400,800),
-    #                   labels=c("800","400","0", "400", "800"),
-    #                   limits=c(-1000, 1000))+
+    #                   breaks = c(-3000, -1500, 0, 1500, 3000),
+    #                   labels=c("3000", "1500", "0", "1500", "3000"),
+    #                   limits=c(-4000, 4000))+
+    #scale_y_continuous(name = "Mean number of trees per hectare",
+     #                  breaks = c(-6000,-3000,0, 3000,6000),
+      #                 labels=c("6000","3000","0", "3000", "6000"),
+       #                limits=c(-8000, 8000))+
+    scale_y_continuous(name = "Mean number of trees per hectare",
+                       breaks = c(-2000,-1000,0, 1000,2000),
+                       labels=c("2000","1000","0", "1000", "2000"),
+                       limits=c(-2500, 2500))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Pine\nn=26", x=6, y=3600) +       # all regions
-    #annotate("text", cex=7, label= "Pine\nn=12", x=6, y=800) +       # Trøndelag
-    #annotate("text", cex=7, label= "Pine\nn=14", x=6, y=0.5) +       # Telemark
+    #annotate("text", cex=7, label= "Pine\nn=26", x=6, y=3600) +       # all regions
+    #annotate("text", cex=7, label= "Pine\nn=10", x=6, y=6000) +       # Trøndelag - "Selbu_Sl" &  "steinkjer_2BBb"
+    annotate("text", cex=7, label= "Pine\nn=14", x=6, y=2200) +       # Telemark
     #annotate("text", cex=7, label= "Pine\nn=14", x=6, y=0.5) +       # Hedmark
     coord_flip()
 )
@@ -576,21 +579,25 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                       values= c("7" = "red", "4" = "grey60", "1" = "grey100"))+
     scale_linetype_manual(name= "Years since exclosure",
                           values= c("7" = "solid", "4" = "longdash", "1" = "dotted"))+
-    scale_x_continuous(name = "Tree heigth (cm)",
+    scale_x_continuous(name = "Tree height (cm)",
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
-    scale_y_continuous(name = "Mean number of trees per hectare",
-                       breaks = c(-2000, -1000, 0, 1000, 2000),
-                       labels=c("2000","1000","0","1000","2000"),
-                       limits=c(-2400, 2400))+
     #scale_y_continuous(name = "Mean number of trees per hectare",
-    #                   breaks = c(-500, 0, 500),
-    #                   labels=c("500","0","500"),
-    #                   limits=c(-600, 600))+
+    #                   breaks = c(-2000, -1000, 0, 1000, 2000),
+    #                   labels=c("2000","1000","0","1000","2000"),
+    #                   limits=c(-2400, 2400))+
+    #scale_y_continuous(name = "Mean number of trees per hectare",
+     #                  breaks = c(-3000, 0, 3000),
+      #                 labels=c("3000","0","3000"),
+       #                limits=c(-3000, 3000))+
+    scale_y_continuous(name = "Mean number of trees per hectare",
+                       breaks = c(-1000,-500, 0, 500, 1000),
+                       labels=c("1000", "500", "0", "500", "1000"),
+                       limits=c(-1500, 1500))+
     guides(fill=FALSE, linetype=FALSE)+
-    annotate("text", cex=7, label= "Birch spp\nn=31", x=6, y=2160) +     #all Regions
-    #annotate("text", cex=7, label= "Birch sp\nn=15", x=6, y=500) +     #Trøndelag  
-    #annotate("text", cex=7, label= "Birch sp\nn=16", x=6, y=0.3) +     #Telemark
+    #annotate("text", cex=7, label= "Birch spp\nn=31", x=6, y=2160) +     #all Regions
+    #annotate("text", cex=7, label= "Birch sp\nn=12", x=6, y=2500) +     #Trøndelag  
+    annotate("text", cex=7, label= "Birch sp\nn=16", x=6, y=1200) +     #Telemark
     #annotate("text", cex=7, label= "Birch sp\nn=16", x=6, y=0.3) +     #Hedmark
     coord_flip()
 )
@@ -604,7 +611,7 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
                       values= c("7" = "red", "4" = "grey60", "1" = "grey100"))+
     scale_linetype_manual(name= "Years since exclosure",
                           values= c("7" = "solid", "4" = "longdash", "1" = "dotted"))+
-    scale_x_continuous(name = "Tree heigth (cm)",
+    scale_x_continuous(name = "Tree height (cm)",
                        breaks = c(1, 2, 3, 4, 5, 6, 7),
                        labels=c("25","75","125", "175", "225", "275", ">300"))+
     scale_y_continuous(name = "Mean number of trees per hectare",
@@ -632,9 +639,9 @@ SC3$Quantity[SC3$Treatment == "B"] <- SC3$Quantity[SC3$Treatment == "B"]*(-1)
 getwd()
 setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
 
-tiff("demography_plot.tiff", height = 35, width = 20, units = "cm", res = 300)
-#tiff("demography_plot_Trondelag.tiff", height = 35, width = 20, units = "cm", res = 300)
-#tiff("demography_plot_Telemark.tiff", height = 35, width = 20, units = "cm", res = 300)
+#tiff("demography_plot_147.tiff", height = 35, width = 20, units = "cm", res = 300)
+#tiff("demography_plot_Trondelag_149.tiff", height = 35, width = 20, units = "cm", res = 300)
+#tiff("demography_plot_Telemark_147.tiff", height = 35, width = 20, units = "cm", res = 300)
 #tiff("demography_plot_Hedmark.tiff", height = 35, width = 20, units = "cm", res = 300)
 grid.draw(rbind(ggplotGrob(SA_fig), 
                 ggplotGrob(PA_fig), 

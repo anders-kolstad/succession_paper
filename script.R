@@ -22,7 +22,6 @@ library(reshape2)
 # data ####
 density <- read_excel("density.xlsx", sheet = "Sheet1")
 
-
 # housekeeping
 density$Region <- as.factor(density$Region)
 density$Treatment <- as.factor(density$Treatment)

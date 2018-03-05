@@ -45,7 +45,9 @@ cdat <- read_excel("community_data.xlsx",
 cdat2 <- cdat
 cdat <- cdat[cdat$Region=="Trøndelag" | cdat$Region=="Telemark",]
 rm(cdat2)
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
 
+#write.csv(unique(cdat$LocalityName), file = "LocalityNames.csv", row.names = F)
 
 # set data and year
 tail(cdat$'_Date')
@@ -451,12 +453,79 @@ ggplot(data = FG4[FG4$group=="ferns",], aes(x=yse, y= biomass, group=Treatment, 
   geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
   theme_bw()+ggtitle("Ferns")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
 ggplot(data = FG4[FG4$group=="shrubs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+xlab("Years since exclusion")+
   theme_bw()+ggtitle("Dwarf shrubs")+guides(linetype = FALSE)+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
 ncol=1
 )
 dev.off()
 
+
+
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+#productivity <- read.csv("M:/Anders L Kolstad/R/R_projects/succession_paper/prod_index_ID_name_converter.csv", sep=";")
+
+FG3$productivity <- productivity$productivity[match(FG3$LocalityName, productivity$LocalityName)]
+summary(FG3$productivity) # no NA's
+FG3$uniquePlot <- paste(FG3$LocalityName, FG3$Treatment, FG3$Plot, sep = "_")
+modDat <- FG3[FG3$yse==8,]
+yearZ <- FG3[FG3$yse == 0,]
+modDat$start_biomass <- yearZ$biomass[match(modDat$uniquePlot, yearZ$uniquePlot)]
+
+modDat$Treatment <- as.factor(modDat$Treatment)
+modDat$biomass2 <- modDat$biomass-modDat$start_biomass
+
+library(lmerTest)
+modFS <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
+                         data = modDat[modDat$group == "large_herbs",])
+plot(modFS) # tja
+plot(modDat$productivity[modDat$group == "large_herbs"], resid(modFS))   # ok
+plot(modDat$Treatment[modDat$group == "large_herbs"], resid(modFS))      # ok
+summary(modFS)
+modFS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
+                        data = modDat[modDat$group == "large_herbs",])
+
+
+library(glmmTMB)
+modFS2 <- glmmTMB(biomass+1~Treatment*productivity + (1|Region/LocalityName), 
+                        data = modDat[modDat$group == "large_herbs",], family = list(family = "Gamma", link = "log"))
+
+plot(fitted(modFS2), resid(modFS2)) # funell, but with Gamma i'm not sure thats a problem. It should be taken care of by the dispersion parameter
+plot(modDat$productivity[modDat$group == "large_herbs"], resid(modFS2)) # this one is worse
+plot(modDat$Treatment[modDat$group == "large_herbs"], resid(modFS2)) # and this is not good
+# I think the log transformation was best in this case
+
+
+
+modDat2 <- aggregate(data = modDat,
+                biomass~Treatment+LocalityName+group,
+                FUN = mean)
+modDat3 <- dcast(data = modDat2, 
+             LocalityName+group~Treatment,
+             value.var = "biomass")
+modDat3$diff <- modDat3$UB - modDat3$B
+modDat3$productivity <- modDat$productivity[match(modDat3$LocalityName, modDat$LocalityName)]
+
+
+ggplot(data = modDat3, aes(x = productivity, y = diff, group = group, colour = group))+
+  #geom_point()+
+  geom_smooth(method = "lm", se = F)+
+  ylab("Relative difference in biomass\n(Exclosure minus Open plots)")+
+  xlab("Site productivity")
+# expect the larges interaction effects for large herbs, shrubs, and ferns
+
+ggplot(data = modDat3[modDat3$group == "large_herbs",], aes(x = productivity, y = diff))+
+  theme_bw()+theme(text = element_text(size=15))+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
+  ylab("Relative difference in biomass\n(Exclosure minus Open plots)")+
+  xlab("Site productivity")+
+  ggtitle("Large herbs")
+
+
+
+
+# other functional group plots ....
 FG5 <- dcast(FG4, yse+group~Treatment, value.var = "biomass", fun.aggregate = mean)
 FG5$diff <- FG5$UB-FG5$B
 
@@ -495,61 +564,6 @@ ggplot(data = FG7, aes(x=yse, y= diff, group = group, colpur = group))+
   theme(legend.position="top")+
   theme(legend.title=element_blank())
 #dev.off()  
-
-
-# Analyse functional groups   ####
-library(glmmTMB)
-TH_glm <- glmmTMB(biomass+0.1 ~ Treatment * yse + (1|Region/LocalityName/Plot), 
-                  data = subset(FG3, group == "large_herbs"), family = Gamma(link = "log"))
-library(lme4)
-TH_glm <- lmer(biomass ~ Treatment * yse + (1|Region/LocalityName/Plot), 
-                  data = subset(FG3, group == "large_herbs"))
-library(nlme)
-TH_glm <- lme(log(biomass+1) ~ Treatment * yse, random = ~1|Region/LocalityName/Plot, 
-               data = subset(FG3, group == "large_herbs"))
-
-summary(TH_glm)
-plot(TH_glm)
-qqnorm(resid(TH_glm))
-
-#not working well
-# try ignoring time (drawback is you cant standarize by year 0, 
-# unless you subtract the biomass in year 0, but year 0 is still a few months after the fence can up,
-# which is important for short lived species.
-THdat <- subset(FG3, group == "large_herbs" & yse %in% c(6,8))
-THdat2 <- subset(FG3, group == "large_herbs")
-
-sum(THdat$biomass==0)/nrow(THdat)
-# way too many zero - aggregating to plot level
-THdat <- aggregate(data=THdat, biomass~Region+LocalityName+Treatment+group, FUN = mean)
-THdat2 <- aggregate(data=THdat2, biomass~Region+LocalityName+Treatment+group+yse, FUN = mean)
-sum(THdat$biomass==0)/nrow(THdat) #ok
-
-TH_glm <- lme(log(biomass+1) ~ Treatment, random = ~1|Region/LocalityName, 
-              data = THdat)
-TH_glm <- lme(log(biomass+1) ~ Treatment*yse, random = ~1|Region/LocalityName, 
-              data = THdat2) # negative fitted values
-
-TH_glm <- glmmTMB(biomass+0.1 ~ Treatment*yse + (1|Region/LocalityName), 
-                  data = THdat2,
-                  family = Gamma(link = "log"))
-
-TH_glm <- glmer(biomass+0.1 ~ Treatment*scale(yse, scale=F) +(1|Region/LocalityName), 
-                  data = THdat2,
-                  family = Gamma)
-
-summary(TH_glm)
-plot(TH_glm)
-R <- resid(TH_glm, type = "pearson")
-plot(fitted(TH_glm), R)
-boxplot(log(THdat$biomass+1)~as.factor(THdat$Treatment))
-boxplot(R~as.factor(THdat2$Treatment))
-boxplot(R~as.factor(THdat$Treatment))
-
-
-# tHIS WORKS BEST, EVENT WITH A FEW NEGATIVE FITTED VALUES
-TH_glm <- lme(log(biomass+1) ~ Treatment*yse, random = ~1|Region/LocalityName, 
-              data = THdat2) # negative fitted values
 
 
 

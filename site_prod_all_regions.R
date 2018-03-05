@@ -705,4 +705,7 @@ productivity <- select(combined,
 save(productivity, file="M:\\Anders L Kolstad\\R\\R_projects\\succession_paper\\prod_index_telemark_and_trondelag.RData")
 # calculations checked
 
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+write.csv(productivity, "prod_index_ID_name_converter.csv", row.names = F)
 

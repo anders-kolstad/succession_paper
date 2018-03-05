@@ -33,9 +33,12 @@ spruce <- dat[dat$species == "spruce",]
 # Density dataset from 2016 with accurate heights and diameters:
 dat2 <- read.csv("M:/Anders L Kolstad/systherb data/exported cvs/trondelag_hgt_dia_2016.csv", sep=";")
 
+summary(dat2$Treatment) # lots of NA's
 dat3 <- filter(dat2,
                Treatment != "")
 dat3$Treatment <- droplevels(dat3$Treatment)
+
+
 colnames(dat3)[11:12]<- c("hgt", "DGL")
 dat3 <- dat3[,-c(15:16)]
 
@@ -184,11 +187,11 @@ B_surface <- expand.grid(hgt=seq(0,300,by=20),
                       DGL=seq(0,40,by=5))
 B_surface$pp <- predict(M_birch,newdata=B_surface)
 library(rgl)
-with(birch,plot3d(hgt, DGL, biomass, type="s", col=ifelse(birch$treatment=="UB", "blue", "gray"), 
-                 xlab="Height (cm)", ylab="Diamater at ground level (mm)",  zlab =  "Biomass (g)"))
-
-with(B_surface,surface3d(unique(hgt),unique(DGL),pp,
-                      alpha=0.3, front="lines"))
+#with(birch,plot3d(hgt, DGL, biomass, type="s", col=ifelse(birch$treatment=="UB", "blue", "gray"), 
+#                 xlab="Height (cm)", ylab="Diamater at ground level (mm)",  zlab =  "Biomass (g)"))
+#
+#with(B_surface,surface3d(unique(hgt),unique(DGL),pp,
+#                      alpha=0.3, front="lines"))
 
 ###########################################
 ### B Birch HGT Model #####################
@@ -307,7 +310,7 @@ dat4$biomass <- ifelse(dat4$species=="pine", predict(M_pine, newdata=dat4), "")
 dat4$biomass <- ifelse(dat4$species=="rowan", predict(M_rowan2, newdata=dat4), dat4$biomass)
 dat4$biomass <- ifelse(dat4$species=="selje", predict(M_rowan2, newdata=dat4), dat4$biomass)
 dat4$biomass <- ifelse(dat4$species=="birch", predict(M_birch, newdata=dat4), dat4$biomass)
-dat4$biomass <- ifelse(dat4$species=="lavlandsbjørk", predict(M_birch, newdata=dat4), dat4$biomass)
+dat4$biomass <- ifelse(dat4$species=="lavlandsbj?rk", predict(M_birch, newdata=dat4), dat4$biomass)
 dat4$biomass <- ifelse(dat4$species=="spruce", predict(M_spruce2, newdata=dat4), dat4$biomass)
 dat4$biomass <- ifelse(dat4$species=="juniper", predict(M_spruce2, newdata=dat4), dat4$biomass)
 
@@ -317,7 +320,7 @@ hist(dat4$biomass, breaks = 20)
 #plot(dat4$biomass)
 #identify(dat4$biomass)
 #dat4[3373,]
-# there's a large spruce at singsås. Would be nice to exclude it from all years, cause its hard to estimate growth on such a alarge tree
+# there's a large spruce at sings?s. Would be nice to exclude it from all years, cause its hard to estimate growth on such a alarge tree
 dat5 <- dat4[-3373,]
 plot(dat5$biomass)
 #identify(dat5$biomass)
@@ -330,7 +333,7 @@ plot(dat6$biomass)
 #max(dat5$hgt)
 #max(dat4$hgt)
 hist(dat6$biomass)
-# ** #  PROTOCOL: Excluding trees above 6 meters (one is 6.27 (Borgan) and the nest is 14m (Singsås))
+# ** #  PROTOCOL: Excluding trees above 6 meters (one is 6.27 (Borgan) and the nest is 14m (Sings?s))
 
 
 
@@ -428,14 +431,26 @@ den <- select(density,
 # Insted of height classes I will use the center values for each class:
 # but lets see how height was recorded
 table(den$skikt, den$aar)
-# Max height class is 7 (except in 2014)
+# Max height class is 7 !!! (except in 2014)
+
+# need same protocol for all years
+den$skikt[den$skikt >7] <- 7
+summary(den$skikt)   # noen nuller
+den <- filter(den,
+              treart != "ingen",
+              treart != "ukjent",
+              treart != "klunger",
+              treart != "hassel")   # regner klunger og hassel som busker
+summary(den$skikt)  # nuller borte
+
+# some trees were 20+ meters !!
 
 den$hgt <- den$skikt*50-25
-#summary(den$høyde)
+summary(den$hgt)
 
 
 #NEED TO MELT/untable "ANTALL" INTO SEPARATE ROWS
-#summary(den$antall_) # max = 216, dvs jeg kan ikke gjøre dcast
+#summary(den$antall_) # max = 216, dvs jeg kan ikke gj?re dcast
 #hist(den$antall_, breaks = 20)
 den_ut <- untable(df = den, num = den$antall_)
 
@@ -447,7 +462,7 @@ den_ut <- untable(df = den, num = den$antall_)
 #levels(den_ut$treart)
 
 
-
+# Predict biomass from model above
 # OBS - Models probably not valid for all scenarios at Tingvoll where there are large pine for example
 den_ut$biomass <- ifelse(den_ut$treart=="furu" & den_ut$rute=="ub", predict(M_pine2, newdata=den_ut), "")
 den_ut$biomass <- ifelse(den_ut$treart=="furu" & den_ut$rute=="b", predict(M_pineBhgt, newdata=den_ut), den_ut$biomass)
@@ -457,11 +472,11 @@ den_ut$biomass <- ifelse(den_ut$treart=="gran", predict(M_spruce, newdata=den_ut
 den_ut$biomass <- ifelse(den_ut$treart=="rogn" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
 den_ut$biomass <- ifelse(den_ut$treart=="rogn" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
 
-den_ut$biomass <- ifelse(den_ut$treart=="bjørk" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
-den_ut$biomass <- ifelse(den_ut$treart=="bjørk" & den_ut$rute=="b", predict(M_Abirch_B, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="bjÃ¸rk" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="bjÃ¸rk" & den_ut$rute=="b", predict(M_Abirch_B, newdata=den_ut), den_ut$biomass)
 
-den_ut$biomass <- ifelse(den_ut$treart=="lavlandbjørk" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
-den_ut$biomass <- ifelse(den_ut$treart=="lavlandbjørk" & den_ut$rute=="b", predict(M_Abirch_B, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="lavlandbjÃ¸rk" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="lavlandbjÃ¸rk" & den_ut$rute=="b", predict(M_Abirch_B, newdata=den_ut), den_ut$biomass)
 
 den_ut$biomass <- ifelse(den_ut$treart=="einer" & den_ut$rute=="ub", predict(M_pine2, newdata=den_ut), den_ut$biomass)
 den_ut$biomass <- ifelse(den_ut$treart=="einer" & den_ut$rute=="b", predict(M_pineBhgt, newdata=den_ut), den_ut$biomass)
@@ -472,8 +487,8 @@ den_ut$biomass <- ifelse(den_ut$treart=="selje" & den_ut$rute=="b", predict(M_ro
 den_ut$biomass <- ifelse(den_ut$treart=="ask" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
 den_ut$biomass <- ifelse(den_ut$treart=="ask" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
 
-den_ut$biomass <- ifelse(den_ut$treart=="gråor" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
-den_ut$biomass <- ifelse(den_ut$treart=="gråor" & den_ut$rute=="b", predict(M_birch2, newdata=den_ut), den_ut$biomass)   # using model for unbrowsed birch because aldre is not typically browsed
+den_ut$biomass <- ifelse(den_ut$treart=="grÃ¥or" & den_ut$rute=="ub", predict(M_birch2, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="grÃ¥or" & den_ut$rute=="b", predict(M_birch2, newdata=den_ut), den_ut$biomass)   # using model for unbrowsed birch because aldre is not typically browsed
 
 den_ut$biomass <- ifelse(den_ut$treart=="hegg" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
 den_ut$biomass <- ifelse(den_ut$treart=="hegg" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
@@ -481,11 +496,11 @@ den_ut$biomass <- ifelse(den_ut$treart=="hegg" & den_ut$rute=="b", predict(M_row
 den_ut$biomass <- ifelse(den_ut$treart=="osp" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
 den_ut$biomass <- ifelse(den_ut$treart=="osp" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
 
-den_ut$biomass <- ifelse(den_ut$treart=="rødhyll" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
-den_ut$biomass <- ifelse(den_ut$treart=="rødhyll" & den_ut$rute=="b", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)   # this species is also not browsed by moose
+den_ut$biomass <- ifelse(den_ut$treart=="rÃ¸dhyll" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="rÃ¸dhyll" & den_ut$rute=="b", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)   # this species is also not browsed by moose
 
-den_ut$biomass <- ifelse(den_ut$treart=="lønn" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
-den_ut$biomass <- ifelse(den_ut$treart=="lønn" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="lÃ¸nn" & den_ut$rute=="ub", predict(M_rowanUB, newdata=den_ut), den_ut$biomass)
+den_ut$biomass <- ifelse(den_ut$treart=="lÃ¸nn" & den_ut$rute=="b", predict(M_rowanB, newdata=den_ut), den_ut$biomass)
 #tail(den_ut[den_ut$treart=="furu" & den_ut$rute=="ub",])
 #tail(den_ut[den_ut$treart=="gran" ,])
 
@@ -494,18 +509,11 @@ den_ut$biomass <- ifelse(den_ut$treart=="lønn" & den_ut$rute=="b", predict(M_row
 # FILTER ##################
 
 levels(den_ut$treart)
-D <- filter(den_ut,
-              treart != "ingen",
-              treart != "ukjent",
-              treart != "klunger",
-              treart != "hassel")   # regner klunger og hassel som busker
-
+D <- den_ut
 
 #levels(D$region)
 #levels(D$rute)
 #table(D$lokalitetid, D$rute)
-
-
 D$treart <- droplevels(D$treart)
 #table(D1$lokalitetid, D1$flate)
 #table(D1$lokalitetid, D1$aar)
@@ -518,9 +526,10 @@ setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
 #save(D1, file="biomass_per_tree.RData")
 load("biomass_per_tree.RData")
 D1 <- filter(D1,
-             region %in% c("telemark", "trøndelag"))
+             region %in% c("telemark", "trÃ¸ndelag"))
 D1$region <- factor(D1$region)
-#table(D1$region, D1$treart)
+table(D1$region, D1$treart)
+D1$treart <- factor(D1$treart)
 #table(D1$region, D1$aar)
 #table(D1$lokalitetid, D1$rute)
 
@@ -566,7 +575,7 @@ ggplot(data = bio_circle2)+
   facet_wrap( ~ locationID, scales = "free")
 # most extreme is location 20 in year 2015
 # IMPORTANT - if tree height is recorded with a maximum height class (3m) we cannot model biomass over time and perhaps not make reliable productivity indeces?
-
+# the outlier in location 12 is UBÃ˜V
 #table(bio_circle2$locationID, bio_circle2$year)
 
 
@@ -574,33 +583,58 @@ ggplot(data = bio_circle2)+
 bio_plot2 <- aggregate(cbind(Biomass_plot = bio_circle2$Biomass_circle), 
                       by= list(
                                locationID=bio_circle2$locationID, 
-                               year=bio_circle2$year),  
+                               year=bio_circle2$year,
+                               trt=bio_circle2$trt),  
                       FUN = mean, drop=F)
 dim(bio_plot2) #217
-bio_plot2$biomass_kg_m2 <- (bio_plot2$Biomass_plot/1000)/(pi*2^2)
 
+# standardise biomass per area
+bio_plot2$biomass_tonn_ha <- (bio_plot2$Biomass_plot/1000)/(pi*2^2)*10
+
+# add region (nessesarily lost due to 'drop = F' argument). LocationID for TrÃ¸ndelag is between 11 and 25
 bio_plot2$region <- ifelse(bio_plot2$locationID >26, "Telemark", "Trondelag")
 
+ggplot(data = bio_plot2)+
+  geom_line(aes(x=year, y=biomass_tonn_ha, group = trt, linetype = trt))+facet_wrap(~ locationID, scales="free")
+# many locations have steeper slopes for the open plots, indicating large spatial variation that may even be bigger 
+# than the browsing effect. Therefore, to calculate annual biomass increment as a site productivity measure I could
+# use the combined biomass for both treatments. This would, however, make browsing pressure part of the index used to test
+# itself (circularity) and high moose density areas will get a lower treatment:productivity interaction. But reversly, 
+# if the exclusure has highest annual biomass increments, this interaction will become too large.
+# I could use either the sum/average of both treatments or the max. The latter I think is best as as it doesn't pull down the
+# productivity index for locations with very high browsing pressure, like Bratsberg.
 
-Dwide <- dcast(bio_plot2, locationID+region ~year, 
-                value.var = "biomass_kg_m2", fun.aggregate = sum, na.rm = F)
+
+bio_trt <- aggregate(cbind(biomass_tonn_ha = bio_plot2$biomass_tonn_ha), 
+                       by= list(
+                         year=bio_plot2$year,
+                         trt=bio_plot2$trt,
+                         region = bio_plot2$region),  
+                       FUN = mean)
+ggplot(data = bio_trt, aes(x=year, y=biomass_tonn_ha, group = trt, linetype = trt))+
+  #geom_line()+
+  geom_smooth(method = "lm")
 
 
-Dwide$site <- c("Kalddalbekken",
-                "Svarthovdveien",
-                "Borgsetran",
-                "Bjøllåa",
-                "Borgan",
-                "Skjørholmskogen",
-                "Vålåvatnet",
-                "Bratsberg",
-                "Hilmo",
-                "Malvik",
-                "Fløneset",
-                "Klesetmarka",
-                "Slindsvannet",
-                "Singsås",
-                "Sæterdalsveien")
+Dwide <- dcast(bio_plot2, locationID+region+trt ~year, 
+                value.var = "biomass_tonn_ha", fun.aggregate = mean, na.rm = F)
+
+
+#Dwide$site <- c("Kalddalbekken",
+#                "Svarthovdveien",
+#                "Borgsetran",
+#                "Bj?ll?a",
+#                "Borgan",
+#                "Skj?rholmskogen",
+#                "V?l?vatnet",
+#                "Bratsberg",
+#                "Hilmo",
+#                "Malvik",
+#                "Fl?neset",
+#                "Klesetmarka",
+#                "Slindsvannet",
+#                "Sings?s",
+#                "S?terdalsveien")
 #Dwide <- arrange(Dwide, Dwide$'2015')
 
 
@@ -609,371 +643,66 @@ Dwide$site <- c("Kalddalbekken",
 #0.36790729+((0.69783663-0.36790729)/2)
 
 
+TrB <- Dwide[Dwide$region == "Trondelag" & Dwide$trt == "b",]
+TrUB <- Dwide[Dwide$region == "Trondelag" & Dwide$trt == "ub",]
+TeB <- Dwide[Dwide$region == "Telemark" & Dwide$trt == "b",]
+TeUB <- Dwide[Dwide$region == "Telemark" & Dwide$trt == "ub",]
 
-par(mar=c(2,4,3,3))
-par(mfrow=c(2,1))
-barplot(Dwide$`2015`, names.arg = "", las=2, ylab="Biomass (g)", main= "Standing Biomass 2015 in exclosures")
-barplot(Dwide$`2014`, names.arg = Dwide$site, las=2, main="Standing Biomass 2014 in exclosures")
+combined <- NULL
+TrB$annInc_Mg_ha <-              ((TrB$`2015`- TrB$`2014`) +
+                                 (TrB$`2014`- TrB$`2013`) +
+                                 (TrB$`2013`- TrB$`2012`) +
+                                 (TrB$`2012`- TrB$`2011`) +
+                                 (TrB$`2011`- TrB$`2010`) +
+                                 (TrB$`2010`- TrB$`2009`) ) /6
+TrUB$annInc_Mg_ha <-               ((TrUB$`2015`- TrUB$`2014`) +
+                                    (TrUB$`2014`- TrUB$`2013`) +
+                                    (TrUB$`2013`- TrUB$`2012`) +
+                                    (TrUB$`2012`- TrUB$`2011`) +
+                                    (TrUB$`2011`- TrUB$`2010`) +
+                                    (TrUB$`2010`- TrUB$`2009`) ) /6
+TeUB$annInc_Mg_ha <-                 ((TeUB$`2015`- TeUB$`2014`) +
+                                      (TeUB$`2014`- TeUB$`2013`) +
+                                      (TeUB$`2013`- TeUB$`2012`) +
+                                      (TeUB$`2012`- TeUB$`2011`) +
+                                      (TeUB$`2011`- TeUB$`2010`)  ) /5
+TeB$annInc_Mg_ha <-                    ((TeB$`2015`- TeB$`2014`) +
+                                        (TeB$`2014`- TeB$`2013`) +
+                                        (TeB$`2013`- TeB$`2012`) +
+                                        (TeB$`2012`- TeB$`2011`) +
+                                        (TeB$`2011`- TeB$`2010`)  ) /5
 
-#head(Dwide)
+combined_Tr <- data.frame(cbind(Region = TrB$region, 
+                             locationID = TrB$locationID, 
+                             Exclosures_annInc_Mg_ha = TrUB$annInc_Mg_ha, 
+                             OpenPlots_annInc_Mg_ha  = as.numeric(TrB$annInc_Mg_ha)))
+combined_Tr$Exclosures_annInc_Mg_ha <- as.numeric(as.character(combined_Tr$Exclosures_annInc_Mg_ha))
+combined_Tr$OpenPlots_annInc_Mg_ha <- as.numeric(as.character(combined_Tr$OpenPlots_annInc_Mg_ha))
+combined_Tr$max_annual_inc_tonns_ha <- ifelse(combined_Tr$Exclosures_annInc_Mg_ha > combined_Tr$OpenPlots_annInc_Mg_ha,
+                                              combined_Tr$Exclosures_annInc_Mg_ha , combined_Tr$OpenPlots_annInc_Mg_ha)
 
-#remove large spruce from Borgan and Singås
-# check it , but they were not recorded in other years...
+combined_Te <- data.frame(cbind(Region = TeB$region, 
+                                locationID = TeB$locationID, 
+                                Exclosures_annInc_Mg_ha = TeUB$annInc_Mg_ha, 
+                                OpenPlots_annInc_Mg_ha  = as.numeric(TeB$annInc_Mg_ha)))
+combined_Te$Exclosures_annInc_Mg_ha <- as.numeric(as.character(combined_Te$Exclosures_annInc_Mg_ha))
+combined_Te$OpenPlots_annInc_Mg_ha <- as.numeric(as.character(combined_Te$OpenPlots_annInc_Mg_ha))
+combined_Te$max_annual_inc_tonns_ha <- ifelse(combined_Te$Exclosures_annInc_Mg_ha > combined_Te$OpenPlots_annInc_Mg_ha,
+                                              combined_Te$Exclosures_annInc_Mg_ha , combined_Te$OpenPlots_annInc_Mg_ha)
 
 
-Dwide$annInc_kg_m2 <- ((Dwide$`2016`- Dwide$`2015`) + 
-                                 (Dwide$`2015`- Dwide$`2014`) +
-                                 (Dwide$`2014`- Dwide$`2013`)+
-                                 (Dwide$`2013`- Dwide$`2012`) +
-                                 (Dwide$`2012`- Dwide$`2011`) +
-                                 (Dwide$`2011`- Dwide$`2010`) +
-                                 (Dwide$`2010`- Dwide$`2009`))/7
+combined <- rbind(  combined_Tr, combined_Te)
+plot(combined$max_annual_inc_tonns_ha)
+identify(combined$max_annual_inc_tonns_ha, plot = T) # [1] 10 -> Mlavik (punching error)
+boxplot(combined$max_annual_inc_tonns_ha ~ combined$Region) # similar between regions. Region is a random factor
+# so I dont need to standardise per region. 
+combined$max_annual_inc_tonns_ha <- combined$max_annual_inc_tonns_ha/max(combined$max_annual_inc_tonns_ha) 
+summary(combined$max_annual_inc_tonns_ha) # max = 1
 
 
-write.csv(Dwide, file="M:/Anders L Kolstad/systherb data/exported cvs/biomass_trondelag_UB_sites.csv", row.names = F)
+productivity <- select(combined, 
+                       Region, locationID, productivity = max_annual_inc_tonns_ha)
+save(productivity, file="M:\\Anders L Kolstad\\R\\R_projects\\succession_paper\\prod_index_telemark_and_trondelag.RData")
 # calculations checked
-# moving to new script (site priductivty continued) because computer keeps crashing
 
-# **************************************** ##################
 
-#Dwide$PerCentAnnInc <-  (((Dwide$`2016`- Dwide$`2015`)/Dwide$`2016`/(2016-2015)) + 
-                         ((Dwide$`2016`- Dwide$`2014`)/Dwide$`2016`/(2016-2014)) +
-                         ((Dwide$`2016`- Dwide$`2013`)/Dwide$`2016`/(2016-2013)) +
-                         ((Dwide$`2016`- Dwide$`2012`)/Dwide$`2016`/(2016-2012)) +
-                         ((Dwide$`2016`- Dwide$`2011`)/Dwide$`2016`/(2016-2011)) +
-                         ((Dwide$`2016`- Dwide$`2010`)/Dwide$`2016`/(2016-2010)) +
-                         ((Dwide$`2016`- Dwide$`2009`)/Dwide$`2016`/(2016-2009)))/7
-
-# annInc is flawed because of Skjørmolmskogen, but measurement error has low impact
-# percent annInc is flawed due to measurement errors
-
-#Dwide[,c(1,2, 12:14)]
-
-#library(dplyr)
-#Dwide <- arrange(Dwide, Dwide$'annIncKG_m2')
-#par(mfrow=c(1,1), mar=c(8,5,3,3))
-#Dwide$annIncKG_m2 <- (Dwide$annInc/1000)/(pi*2^2)*4
-#colnames(Dwide)
-#barplot(Dwide[,c(15)], names.arg = Dwide$site, las=2, ylab="Biomass (kg/m2)", main= "Average Annual Biomass Increments")
-#grid(NA, NULL)
-
-#write.csv(Dwide, file="M:/Anders L Kolstad/systherb data/exported cvs/biomass_trondelag_UB_sites.csv", row.names = F)
-
-###
-#temp############
-par(mfrow=c(4,2))
-
-plot(birch_B$hgt, birch_B$biomass, xlim=c(0,700), ylim=c(0,4000), 
-     xlab="Height (cm)", ylab="Biomass (g)", main="Browsed Birch")
-lines(hgtGridB3, birch_ppB3)
-
-plot(birch2016$hgt[birch2016$Treatment=="unbrowsed"], birch2016$pp[birch2016$Treatment=="unbrowsed"], 
-     main = "Un-browsed Birch", xlab="Measured height (cm)", ylab="Modelled biomass (g)", 
-     ylim=c(0,4000), xlim=c(0,700))
-lines(hgtGridB_UB, birch2016ub_p)
-
-plot(pine2$hgt, pine2$biomass,
-     main = "Browsed Pine", xlab="Height (cm)", ylab="Biomass (g)", xlim=c(0,350), ylim=c(0,3100))
-lines(grid_M_pineBhgt, pred_M_pineBhgt)
-
-plot(pine2016$hgt[pine2016$Treatment=="unbrowsed"], pine2016$pp[pine2016$Treatment=="unbrowsed"], 
-     main = "Un-browsed Pine", xlab="Measured height (cm)", ylab="Modelled biomass (g)", 
-     ylim=c(0,3100), xlim=c(0,350))
-lines(mhgtGrid, pine2016ub_p)
-
-
-plot(rowanB$hgt, rowanB$biomass, xlim=c(0,420), ylim=c(0,1000), 
-     xlab="Height (cm)", ylab="Biomass (g)", main="Browsed Rowan")
-lines(hgtGridR2, rowan_ppB)
-
-plot(rowanUB$hgt, rowanUB$biomass, xlim=c(0,420), ylim=c(0,1000), 
-     xlab="Height (cm)", ylab="Biomass (g)", main="Un-browsed Rowan")
-lines(hgtGridR, rowan_ppUB)
-
-plot(spruce$hgt, spruce$biomass, xlim=c(0,350), ylim=c(0,3600), 
-     xlab="Height (cm)", ylab="Biomass (g)", main="Spruce")
-lines(hgtGridS, spruce_pp)
-
-##### OLD #####################
-
-Dlong <- melt(Dwide, id.vars = c("lokalitetid", "arskogbon", "region", "annIncKG_m2", "site", "annInc"), variable_name  = "year", value.name = "bm")
-colnames(Dlong)[8] <- "biomass"
-
-
-
-# PLOT increases  ##############
-plot(as.numeric(Dlong$year), Dlong$biomass)
-identify(as.numeric(Dlong$year), Dlong$biomass)
-
-par(mfrow=c(2,2))
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 11]), Dlong$biomass[Dlong$lokalitetid == 11], main="Kalddalbekken") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 12]), Dlong$biomass[Dlong$lokalitetid == 12], main="Svarthovdveien") # very large variation! Check!
-# I checked, and the sample trees accumulated hgt is always increasing. The problem lies in the density data.
-# It seem like there is a multistemmed sample birch which some years have been counted as one stem and other year as several
-
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 13]), Dlong$biomass[Dlong$lokalitetid == 13], main="Borgsetran") # not perfectly linear, but high r2
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 14]), Dlong$biomass[Dlong$lokalitetid == 14], main="Bjøllåa") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 15]), Dlong$biomass[Dlong$lokalitetid == 15], main="Borgan") # one very off year
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 16]), Dlong$biomass[Dlong$lokalitetid == 16], main="Skjørholskogen") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 17]), Dlong$biomass[Dlong$lokalitetid == 17], main="Vålåvatnet") # good. one off year
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 18]), Dlong$biomass[Dlong$lokalitetid == 18], main="Bratsberg") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 19]), Dlong$biomass[Dlong$lokalitetid == 19], main="Hilmo") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 20]), Dlong$biomass[Dlong$lokalitetid == 20], main="Malvik") # nice example of what I'm trying to do
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 21]), Dlong$biomass[Dlong$lokalitetid == 21], main="Fløneset") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 22]), Dlong$biomass[Dlong$lokalitetid == 22], main="Klesetmarka") # not perfectly linear
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 23]), Dlong$biomass[Dlong$lokalitetid == 23], main="Slindsvannet") # good
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 24]), Dlong$biomass[Dlong$lokalitetid == 24], main="Singsås") # ok
-plot(as.numeric(Dlong$year[Dlong$lokalitetid == 25]), Dlong$biomass[Dlong$lokalitetid == 25], main="Sæterdalsveien") # good
-
-
-# MODELS (LM) ############
-m11 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 11)
-m12 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 12)
-m12x <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 12 & D5long$year!="2009" & D5long$year!="2012")
-m13 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 13)
-m14 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 14)
-m15 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 15)
-m15x <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 15 & D5long$year!="2013")
-m16 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 16)
-m17 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 17)
-m18 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 18)
-m19 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 19)
-m20 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 20)
-m20x <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 20 & D5long$year!="2015")
-m21 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 21)
-m22 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 22)
-m23 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 23)
-m24 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 24)
-m25 <- lm(D5long$biomass~as.numeric(D5long$year), subset = D5long$lokalitetid == 25)
-
-# Weighed regression ##################
-# the beta is more sensitive to extreme values at either end, so these could be weighed down (by how much?)
-# weighing different values of the explanatory variable inherently reduces R2, but thats OK. The justification
-# for weighing needs to be theoretical and a priory
-
-D5long$nYear <- as.numeric(D5long$year)
-D5long$weights <- length(unique(D5long$nYear))-1-abs(D5long$nYear-mean(unique(D5long$nYear))) 
-# weighing down low and high years by max 50%
-
-m11w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 11, weights = D5long$weights)
-m12w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 12, weights = D5long$weights)
-m12xw <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 12 & D5long$year!="2009" & D5long$year!="2012", weights = D5long$weights)
-m13w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 13, weights = D5long$weights)
-m14w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 14, weights = D5long$weights)
-m15w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 15, weights = D5long$weights)
-m15xw <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 15 & D5long$year!="2013",weights = D5long$weights)
-m16w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 16, weights = D5long$weights)
-m17w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 17, weights = D5long$weights)
-m18w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 18, weights = D5long$weights)
-m19w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 19, weights = D5long$weights)
-m20w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 20, weights = D5long$weights)
-m21w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 21, weights = D5long$weights)
-m22w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 22, weights = D5long$weights)
-m23w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 23, weights = D5long$weights)
-m24w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 24, weights = D5long$weights)
-m25w <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 25, weights = D5long$weights)
-
-
-# robust models ###############
-# Huberts, k=1.5
-library(MASS)
-m11r <- rlm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 11, k=1.5)
-
-sdm11r <- sd((resid(m11r)))
-round(resid(m11r)/sdm11r, 2) 
-# this show the sd distance of all residuals. K value is the threshold for how large residuals 
-# need to before they are penalized
-# here x=4 is the most extreme, but its not very far over the k value of 1.5
-
-
-
-#m12r <- lm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 12, k=1.5)
-#sdm12r <- sd((resid(m12r)))
-#round(resid(m12r)/sdm12r, 2) 
-# the residual sd is so large the model fails! I need to manually remove thos points.
-m12r <- rlm(D5long$hgt~as.numeric(D5long$year), 
-            subset = D5long$lokalitetid == 12 & D5long$year!="2009" & D5long$year!="2012", k=1.5)
-sdm12r <- sd((resid(m12r)))
-round(resid(m12r)/sdm12r, 2)  #noe above k value
-
-m13r <- rlm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 13, k=1.5)
-sdm13r <- sd((resid(m13r)))
-round(resid(m13r)/sdm13r, 2) # noe above
-
-
-m15r <- rlm(D5long$hgt~as.numeric(D5long$year), subset = D5long$lokalitetid == 15, k=1.5)
-sdm15r <- sd((resid(m15r)))
-round(resid(m15r)/sdm15r, 2)
-m15r$w # the fifth data value was weighed down 52%
-m15r$psi
-
-# ABLINE #################
-abline(m11)
-abline(m11w, lty=2)
-abline(m11r)
-
-#abline(m12)
-abline(m12x, lty = 1)
-#abline(m12w, lty = 3)
-abline(m12xw, lty = 2)
-abline(m12r)
-
-abline(m13)
-abline(m13w, lty=2)
-
-abline(m14)
-abline(m14w, lty=2)
-
-abline(m15)
-abline(m15x, lty=2)
-#abline(m15w, lty=3)   # with very large error in the middle, weighed models make things worse
-#abline(m15xw)
-abline(m15r)
-
-abline(m16)
-abline(m16w, lty=2)
-
-abline(m17)
-abline(m17w, lty=2)
-
-abline(m18)
-abline(m18w, lty=2)
-
-abline(m19)
-abline(m19w, lty=2)
-
-abline(m20)
-abline(m20x, lty = 2)
-abline(m20w, lty = 3) # think the weighed is better, but signs of accelerating trend
-
-abline(m21)
-abline(m21w, lty=2)
-
-abline(m22)
-abline(m22w, lty=2)
-
-abline(m23)
-abline(m23w, lty =2)
-
-abline(m24)
-abline(m24w, lty=2)
-
-abline(m25)
-abline(m25w, lty=2)
-
-
-# SUMMARY ####################
-summary(m11) # r2=0.99
-summary(m11w)
-
-summary(m12) # r2 = 0.00 !!
-summary(m12x) # r2= 0.79   removed two years with different approaches to multistememd birch
-summary(m12w)
-summary(m12xw)
-
-summary(m13)
-summary(m14)
-summary(m15)  # r2 = 0.83
-summary(m15x) # r2 = 0.97
-summary(m16)
-summary(m17)
-summary(m18)
-summary(m19)
-summary(m20)
-summary(m20x)
-summary(m21)
-summary(m22)
-summary(m23)
-summary(m24)
-summary(m25)
-
-
-# ADD BETA to DF #############
-# I think I will change over to use the weighed models...
-D5wide$beta <- c(m11$coefficients[2],
-                 m12x$coefficients[2],
-                 m13$coefficients[2],
-                 m14$coefficients[2],
-                 m15x$coefficients[2],
-                 m16$coefficients[2],
-                 m17$coefficients[2],
-                 m18$coefficients[2],
-                 m19$coefficients[2],
-                 m20x$coefficients[2],
-                 m21$coefficients[2],
-                 m22$coefficients[2],
-                 m23$coefficients[2],
-                 m24$coefficients[2],
-                 m25$coefficients[2])
-
-
-arrange(D5wide, beta)
-# loc 16 Skjærholmskogen should be more productive, but the circles have very few trees by chance,
-#     however, that shoulcn't effec the rate of change...
-# loc 13 Borgsætran has bonitet14 but here it comes out as medium which I think is more correct
-# same for loc 17 Vålåvatnet - its not that productive
-# loc 14 Bjøllåa is in fact more productive that this index shows
-# loc 22 Klesetmarka comes out as more productive than it is I think
-
-
-
-# OLD ##################
-
-colnames(D5wide)[6:12] <- c("y09", "y10", "y11", "y12", "y13", "y14", "y15")   # pass på at colonnene har rett nummer
-D5wide$incr10 <- ((D5wide$'2010'-D5wide$'2009')/D5wide$'2009')*100 
-D5wide$incr11 <- ((D5wide$'2011'-D5wide$'2010')/D5wide$'2010')*100
-D5wide$incr12 <- ((D5wide$'2012'-D5wide$'2011')/D5wide$'2011')*100
-D5wide$incr13 <- ((D5wide$'2013'-D5wide$'2012')/D5wide$'2012')*100
-D5wide$incr14 <- ((D5wide$'2014'-D5wide$'2013')/D5wide$'2013')*100
-D5wide$incr15 <- ((D5wide$'2015'-D5wide$'2014')/D5wide$'2014')*100
-
-barplot(colMeans(D5wide[,-c(1:10)]))
-# %inc is not stable
-
-# standardizing according to the first year
-D5wide$s10 <- D5wide$'2010' - D5wide$'2009'
-D5wide$s11 <- D5wide$'2011' - D5wide$'2009'
-D5wide$s12 <- D5wide$'2012' - D5wide$'2009'
-D5wide$s13 <- D5wide$'2013' - D5wide$'2009'
-D5wide$s14 <- D5wide$'2014' - D5wide$'2009'
-D5wide$s15 <- D5wide$'2015' - D5wide$'2009'
-barplot(colMeans(D5wide[,-c(1:10)]))
-# growth is quite linear. I think I prefer this accumulated growth approach.
-# The method is quite sensitive to estimates doen the first year (2009):
-# locID 12 had lots og biomass (height) the first year but then decreased.
-# locID 22 had very little the first year and so now ssems to have increased drastically
-
-# calculating biomass inc per standardized year
-D5wide$s11 <- D5wide$'s11' - D5wide$'s10'
-D5wide$s12 <- D5wide$'s12' - D5wide$'s11'
-D5wide$s13 <- D5wide$'s13' - D5wide$'s12'
-D5wide$s14 <- D5wide$'s14' - D5wide$'s13'
-D5wide$s15 <- D5wide$'s15' - D5wide$'s14'
-colnames(D5wide)
-barplot(colMeans(D5wide[,-c(1:11)]))
-# accelerating effect - large trees grow more per year - obvious
-
-#D6 <- melt(D4, id.vars = c("loc", "bon"))
-#plot(as.numeric(D6$variable), D6$value, type = "p")
-
-D4$avg <- (D4$incr11+D4$incr12+D4$incr13+D4$incr14+D4$incr15)/5
-D4 <- arrange(D4, desc(avg))
-
-barplot(D4$avg, D4$loc, width = 1, space = 0, ylab = "annual % increments", 
-        xlab = "locality ID")
-
-boxplot(D4$avg~D4$bon)
-plot(D4$avg~as.numeric(D4$bon))
-
-
-# strange things:
-# Setesdalsveien (loc=25) is in reality one of the least productive sites...
-# and site 16 is high to moderate productive
-# Singsår (24) comes out in the middle
-table(D3$lokalitetid) # site 25 has had 38 sample trees up through the years
-D3[D3$lokalitetid==25,] # and most of them are still quite small
-
-table(D3$lokalitetid) # site 16 has only 8 rows
-D3[D3$lokalitetid==16,] # which means there's very few data points to base an estimate on
-
-# it could correlct itself when using biomass instead if height

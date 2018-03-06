@@ -484,7 +484,7 @@ plot(modDat$Treatment[modDat$group == "large_herbs"], resid(modFS))      # ok
 summary(modFS)
 modFS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
                         data = modDat[modDat$group == "large_herbs",])
-
+anova(modFS)
 
 library(glmmTMB)
 modFS2 <- glmmTMB(biomass+1~Treatment*productivity + (1|Region/LocalityName), 

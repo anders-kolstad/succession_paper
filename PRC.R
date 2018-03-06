@@ -437,27 +437,34 @@ names(FG3)[names(FG3) == "value"]    <- "biomass"
 FG4 <- aggregate(data=FG3, biomass~yse+Treatment+LocalityName+group, FUN = mean)
 table(FG4$LocalityName, FG4$yse, FG4$group)
 
-library(gridExtra)
-tiff("Functional_groups_gridarrange.tiff", height = 40, width = 12, units = "cm", res=300)
-grid.arrange(
-ggplot(data = FG4[FG4$group=="grasses",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+ #geom_point(aes(shape=Treatment))+
-  theme_bw()+ggtitle("Grasses")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
-ggplot(data = FG4[FG4$group=="large_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+
+
+ff1 <- ggplot(data = FG4[FG4$group=="grasses",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+ 
+  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("")+ggtitle("Grasses")
+
+ff2 <- ggplot(data = FG4[FG4$group=="large_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
   geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+ggtitle("Large herbs")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
-ggplot(data = FG4[FG4$group=="small_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("")+ggtitle("Large herbs")
+
+ff3 <- ggplot(data = FG4[FG4$group=="small_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
   geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+ggtitle("Small herbs")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
-ggplot(data = FG4[FG4$group=="ferns",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")")))  +ggtitle("Small herbs")
+
+ff4 <- ggplot(data = FG4[FG4$group=="ferns",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
   geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+ggtitle("Ferns")+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
-ggplot(data = FG4[FG4$group=="shrubs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("") +ggtitle("Ferns")
+
+ff5 <- ggplot(data = FG4[FG4$group=="shrubs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
   geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+xlab("Years since exclusion")+
-  theme_bw()+ggtitle("Dwarf shrubs")+guides(linetype = FALSE)+ylab(expression(paste("Biomass (g m"^"-2", ")"))),
-ncol=1
-)
-dev.off()
+  theme_bw()+guides(linetype = FALSE)+ylab("") +ggtitle("Dwarf shrubs")
+
+library(grid)
+#tiff("Functional_groups_gridarrange.tiff", height = 40, width = 12, units = "cm", res=300)
+grid.draw(rbind(ggplotGrob(ff1), ggplotGrob(ff2), 
+                ggplotGrob(ff3), ggplotGrob(ff4),ggplotGrob(ff5),
+                size = "last"))
+#dev.off()
 
 
 
@@ -475,6 +482,11 @@ modDat$start_biomass <- yearZ$biomass[match(modDat$uniquePlot, yearZ$uniquePlot)
 modDat$Treatment <- as.factor(modDat$Treatment)
 modDat$biomass2 <- modDat$biomass-modDat$start_biomass
 
+
+
+
+# LMM ####
+# -large herbs ####
 library(lmerTest)
 modFS <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
                          data = modDat[modDat$group == "large_herbs",])
@@ -482,6 +494,9 @@ plot(modFS) # tja
 plot(modDat$productivity[modDat$group == "large_herbs"], resid(modFS))   # ok
 plot(modDat$Treatment[modDat$group == "large_herbs"], resid(modFS))      # ok
 summary(modFS)
+ICCr <- 0.02536/(0.02536+0.76278+1.28088)
+ICCl <- 0.76278/(0.02536+0.76278+1.28088)
+
 modFS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
                         data = modDat[modDat$group == "large_herbs",])
 anova(modFS)
@@ -495,6 +510,62 @@ plot(modDat$productivity[modDat$group == "large_herbs"], resid(modFS2)) # this o
 plot(modDat$Treatment[modDat$group == "large_herbs"], resid(modFS2)) # and this is not good
 # I think the log transformation was best in this case
 
+# -grasses ####
+modG <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
+                        data = modDat[modDat$group == "grasses",])
+plot(modG) # tja
+plot(modDat$productivity[modDat$group == "grasses"], resid(modG))   # ok
+plot(modDat$Treatment[modDat$group == "grasses"], resid(modG))      # ok
+summary(modG)
+modG <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
+                       data = modDat[modDat$group == "grasses",])
+summary(modG)
+ICCr <- 0
+ICCl <- 0.8301/(0.8301+0.9349)
+
+
+modFS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
+                        data = modDat[modDat$group == "large_herbs",])
+
+
+
+# -small herbs ####
+modSH <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
+                       data = modDat[modDat$group == "small_herbs",])
+plot(modSH) # tja
+plot(modDat$productivity[modDat$group == "small_herbs"], resid(modSH))   # ok
+plot(modDat$Treatment[modDat$group == "small_herbs"], resid(modSH))      # ok
+summary(modSH)
+ICCr <- 0.3341/(0.3341+0.4864+0.6433)
+ICCl <- 0.4864/(0.3341+0.4864+0.6433)
+
+
+# -ferns ####
+modF <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
+                        data = modDat[modDat$group == "ferns",])
+plot(modF) # tja
+plot(modDat$productivity[modDat$group == "ferns"], resid(modF))   # ok
+plot(modDat$Treatment[modDat$group == "ferns"], resid(modF))      # ok
+summary(modF)
+ICCr <- 0
+ICCl <- 0.8961/(0.8961+0.7190)
+
+# -shrubs ####
+modS <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
+                       data = modDat[modDat$group == "shrubs",])
+plot(modS) # tja
+plot(modDat$productivity[modDat$group == "shrubs"], resid(modS))   # ok, sligtly increasing
+plot(modDat$Treatment[modDat$group == "shrubs"], resid(modS))      # ok
+summary(modS)
+modS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
+                       data = modDat[modDat$group == "shrubs",])
+plot(modS) # tja
+plot(modDat$productivity[modDat$group == "shrubs"], resid(modS))   # ok, sligtly increasing
+plot(modDat$Treatment[modDat$group == "shrubs"], resid(modS))      # ok
+summary(modS)
+
+ICCr <- 0.4697/(0.4697+0.9780+1.5549)
+ICCl <- 0.9780/(0.4697+0.9780+1.5549)
 
 
 modDat2 <- aggregate(data = modDat,
@@ -513,15 +584,123 @@ ggplot(data = modDat3, aes(x = productivity, y = diff, group = group, colour = g
   ylab("Relative difference in biomass\n(Exclosure minus Open plots)")+
   xlab("Site productivity")
 # expect the larges interaction effects for large herbs, shrubs, and ferns
+levels(modDat3$group)
 
-ggplot(data = modDat3[modDat3$group == "large_herbs",], aes(x = productivity, y = diff))+
-  theme_bw()+theme(text = element_text(size=15))+
+F1 <- ggplot(data = modDat3[modDat3$group == "grasses",], aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
-  geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
-  ylab("Relative difference in biomass\n(Exclosure minus Open plots)")+
-  xlab("Site productivity")+
-  ggtitle("Large herbs")
+  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  ylab("")+
+  xlab("")
+  #ggtitle("Grasses")
+F2 <- ggplot(data = modDat3[modDat3$group == "large_herbs",], aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  #theme(text = element_text(size=15))+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  ylab("")+
+  xlab("")
+#  ggtitle("Large herbs")
+F3 <- ggplot(data = modDat3[modDat3$group == "small_herbs",], aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  #theme(text = element_text(size=15))+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  ylab("Relative shift in biomass\n(exclosure minus open plots)")+
+  xlab("")
+#  ggtitle("Small herbs")
+F4 <- ggplot(data = modDat3[modDat3$group == "ferns",], aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  #theme(text = element_text(size=15))+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  ylab("")+
+  xlab("")
+#  ggtitle("Ferns")
+F5 <- ggplot(data = modDat3[modDat3$group == "shrubs",], aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  #theme(text = element_text(size=15))+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  ylab("")+
+  xlab("Site productivity")
+  #ggtitle("Dwarf shrubs")
 
+
+grid.draw(rbind(ggplotGrob(F1), ggplotGrob(F2), 
+                ggplotGrob(F3), ggplotGrob(F4),ggplotGrob(F5),
+                size = "last"))
+
+
+
+
+
+
+f1 <- ggplot(data = FG4[FG4$group=="grasses",], aes(x = Treatment, y = biomass+1))+
+  theme_classic()+
+  #theme(text = element_text(size=15))+
+  geom_boxplot()+scale_y_log10()+
+  ylab("")+
+  xlab("")+
+  scale_x_discrete("", labels = c("B" = "Open plots", "UB" = "Exclosures"))
+  #ggtitle("Grasses")
+f2 <- ggplot(data = FG4[FG4$group=="large_herbs",], aes(x = Treatment, y = biomass+1))+
+  theme_classic()+
+  #theme(text = element_text(size=15))+
+  geom_boxplot()+scale_y_log10()+
+  ylab("")+
+  xlab("")+
+  scale_x_discrete("", labels = c("B" = "Open plots", "UB" = "Exclosures"))
+#  ggtitle("Large herbs")
+f3 <- ggplot(data = FG4[FG4$group=="small_herbs",], aes(x = Treatment, y = biomass+1))+
+  theme_classic()+
+  #theme(text = element_text(size=15))+
+  geom_boxplot()+scale_y_log10()+
+  ylab(expression(paste("Biomass (g m"^"-2", ")")))+
+  xlab("")+
+  scale_x_discrete("", labels = c("B" = "Open plots", "UB" = "Exclosures"))
+  #ggtitle("Small herbs")
+f4 <- ggplot(data = FG4[FG4$group=="ferns",], aes(x = Treatment, y = biomass+1))+
+  theme_classic()+
+  #theme(text = element_text(size=15))+
+  geom_boxplot()+scale_y_log10()+
+  ylab("")+
+  xlab("")+
+  scale_x_discrete("", labels = c("B" = "Open plots", "UB" = "Exclosures"))
+#  ggtitle("Ferns")
+f5 <- ggplot(data = FG4[FG4$group=="shrubs",], aes(x = Treatment, y = biomass+1))+
+  theme_classic()+
+  #theme(text = element_text(size=15))+
+  geom_boxplot()+scale_y_log10()+
+  ylab("")+
+  xlab("Treatment")+
+  ggtitle("")+
+  scale_x_discrete("Treatment", labels = c("B" = "Open plots", "UB" = "Exclosures"))
+
+
+grid.draw(rbind(ggplotGrob(f1), ggplotGrob(f2), 
+                ggplotGrob(f3), ggplotGrob(f4),ggplotGrob(f5),
+                size = "last"))
+library(gtable)
+library(cowplot)
+
+setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
+tiff("Functional_groups_all.tiff", height = 40, width = 30, units = "cm", res=300)
+
+plot_grid(ff1, f1, F1,
+          ff2, f2, F2,
+          ff3, f3, F3,
+          ff4, f4, F4,
+          ff5, f5, F5,
+          align = "hv",
+          ncol=3,rel_widths = c(2,1,2))
+dev.off()  
 
 
 

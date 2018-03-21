@@ -166,6 +166,16 @@ cdat <- cbind(loc_year, cdat)
 
 
 
+#Field layer height and moss depth ####
+#plot(cdat$Field_avg_Height)
+#identify(cdat$Field_avg_Height)
+#View(cdat[83,])
+# I wont analyse this data as it includes tree height.
+
+
+
+
+
 # Species groups ####
 # group grasses that proved difficult to identify in the field
 # Keeping Avenella and Des Cea as they are. 
@@ -424,48 +434,103 @@ library(reshape2)
 FG2 <- select(FG, 
               yse, Region, LocalityName, Treatment, Plot,
               grasses, large_herbs, small_herbs,
-              ferns, shrubs, biom)
+              ferns, shrubs, biom, Field_avg_Height, moss_depth= 'Bryophyte height_avg_Height')
 FG3 <- melt(data = FG2, id.vars = names(FG2[,1:5]), measure.vars = names(FG2[,6:ncol(FG2)]))
+length(unique(FG3$LocalityName))
 names(FG3)[names(FG3) == "variable"] <- "group"
 names(FG3)[names(FG3) == "value"]    <- "biomass"
 
-FG4 <- aggregate(data=FG3, biomass~yse+Treatment+LocalityName+group, FUN = mean)
-table(FG4$LocalityName, FG4$yse, FG4$group)
 
+
+FG4 <- aggregate(data=FG3, biomass~yse+Treatment+group, FUN = mean)
+std <- function(x) sd(x, na.rm=T)/sqrt(length(x))
+FG4$SE  <- aggregate(data=FG3, biomass~yse+Treatment+group, FUN = std)[,4]
+pd <- position_dodge(width=0.4)
 
 
 ff1 <- ggplot(data = FG4[FG4$group=="grasses",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+ 
-  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("")+ggtitle("Grasses")
+  ggtitle("Grasses")+
+  #geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "blue", se=F, aes(linetype=NULL, group=NULL))+ 
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  xlab("")+ylab("")+
+  theme(legend.justification = c(0.01, 0.99), 
+        legend.position = c(0.01, 0.99),
+        #legend.background = element_blank(),
+        legend.key.width = unit(3,"line"),
+        legend.text=element_text(size=8),
+        legend.title = element_blank())+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))
+  
 
 ff2 <- ggplot(data = FG4[FG4$group=="large_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("")+ggtitle("Large herbs")
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  guides(linetype = FALSE, shape=FALSE)+
+  xlab("")+ylab("")+
+  ggtitle("Large herbs")+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
+  
 
 ff3 <- ggplot(data = FG4[FG4$group=="small_herbs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab(expression(paste("Biomass (g m"^"-2", ")")))  +ggtitle("Small herbs")
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  guides(linetype = FALSE, shape=FALSE)+
+  xlab("")+
+  ylab(expression(paste("Biomass (g m"^"-2", ")")))  +
+  ggtitle("Small herbs")+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
 
 ff4 <- ggplot(data = FG4[FG4$group=="ferns",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+
-  theme_bw()+guides(linetype = FALSE)+xlab("")+ylab("") +ggtitle("Ferns")
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  guides(linetype = FALSE, shape=FALSE)+
+  xlab("")+ylab("")+
+  ggtitle("Ferns")+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
 
 ff5 <- ggplot(data = FG4[FG4$group=="shrubs",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black")+xlab("")+
-  theme_bw()+guides(linetype = FALSE)+ylab("") +ggtitle("Dwarf shrubs")
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  guides(linetype = FALSE, shape=FALSE)+
+  xlab("")+ylab("")+
+  ggtitle("Dwarf shrubs")+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
 
 
 ff6 <- ggplot(data = FG4[FG4$group=="biom",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
   theme_bw()+
-  xlab("Years since exclusion")+
+  guides(linetype = FALSE, shape=FALSE)+
   ylab("")+
+  xlab("Years since exclusion")+
   ggtitle("Field layer biomass")+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black", se=F)+
-  geom_point(data = FG4[FG4$group=="biom" & FG4$Treatment == "B",], aes(y=biomass), shape=1, position = position_nudge(x = -0.1))+
-  geom_point(data = FG4[FG4$group=="biom" & FG4$Treatment == "UB",], aes(y=biomass), shape=2, position = position_nudge(x = 0.1))+
-  guides(linetype=FALSE, shape = FALSE)
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
+  
 
 
+
+#ggplot(data = FG4[FG4$group=="Field_avg_Height",], aes(x=yse, y= biomass, group=Treatment, linetype=Treatment))+
+#  geom_line(size=1, position=pd)+ 
+#  geom_point(size =3, position=pd, aes(shape=Treatment))+
+#  geom_errorbar(aes(ymax=biomass+SE, ymin=biomass-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+#  theme_bw()+
+#  ylab("Field layer height (cm)")+
+#  xlab("Years since exclusion")+
+#  ggtitle("Field layer height")
 
 
 setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
@@ -515,8 +580,8 @@ AIC(modFS)-AIC(modFS4)
 modFS <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
                         data = modDat[modDat$group == "large_herbs",], REML = T)
 summary(modFS)
-ICCr <- 0.02536/(0.02536+0.76278+1.28088)
-ICCl <- 0.76278/(0.02536+0.76278+1.28088)
+ICCr <- 0.1462/(0.1462+0.2401+0.8940)
+ICCl <- 0.2401/(0.1462+0.2401+0.8940)
 
 
 library(glmmTMB)
@@ -545,14 +610,15 @@ modG2 <- update(modG, .~. -Treatment:productivity)
 modG3 <- update(modG2, .~. -Treatment)
 modG4 <- update(modG2, .~. -productivity)
 AIC(modG, modG2, modG3, modG4)
+AIC(modG2) - AIC(modG)
+AIC(modG2) - AIC(modG3)
+AIC(modG2) - AIC(modG4)
 
 modG2 <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
                         data = modDat[modDat$group == "grasses",])
 summary(modG2)
 
-AIC(modG2) - AIC(modG)
-AIC(modG2) - AIC(modG3)
-AIC(modG2) - AIC(modG4)
+
 
 anova(modG2, modG3)
 anova(modG2, modG4)
@@ -584,9 +650,9 @@ plot(modDat$Treatment[modDat$group == "small_herbs"], resid(modSH))      # ok
 modSH_add <- update(modSH, .~. - Treatment:productivity)
 modSH_pi <- update(modSH_add, .~. - Treatment)
 modSH_exc <- update(modSH_add, .~. - productivity)
-AIC(modSH, modSH_add, modSH_exl, modSH_pi)
+AIC(modSH, modSH_add, modSH_exc, modSH_pi)
 AIC(modSH)-AIC(modSH_add)
-AIC(modSH)-AIC(modSH_exl)
+AIC(modSH)-AIC(modSH_exc)
 AIC(modSH)-AIC(modSH_pi)
 
 modSH <- lmerTest::lmer(log(biomass+1)~Treatment*productivity + (1|Region/LocalityName), 
@@ -595,8 +661,8 @@ summary(modSH)
 summary(modSH_exc)
 summary(modSH_pi)
 
-ICCr <- 0.3341/(0.3341+0.4864+0.6433)
-ICCl <- 0.4864/(0.3341+0.4864+0.6433)
+ICCr <- 0.3256/(0.3256+0.4837+0.6492)
+ICCl <- 0.4837/(0.3256+0.4837+0.6492)
 
 
 
@@ -661,15 +727,8 @@ modS_add <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/Loc
                        data = modDat[modDat$group == "shrubs",])
 summary(modS_add)
 
-modS <- lmerTest::lmer(log(biomass+1)~Treatment+productivity + (1|Region/LocalityName), 
-                       data = modDat[modDat$group == "shrubs",])
-plot(modS) # tja
-plot(modDat$productivity[modDat$group == "shrubs"], resid(modS))   # ok, sligtly increasing
-plot(modDat$Treatment[modDat$group == "shrubs"], resid(modS))      # ok
-summary(modS)
-
-ICCr <- 0.4697/(0.4697+0.9780+1.5549)
-ICCl <- 0.9780/(0.4697+0.9780+1.5549)
+ICCr <- 0.4674/(0.4674+0.9791+1.5550)
+ICCl <- 0.9791/(0.4674+0.9791+1.5550)
 
 
 
@@ -708,6 +767,127 @@ ICCl <- 0.05562/(0.14581+0.05562+0.33360)
 
 
 
+#*****************************************
+# -Moss depth  ####
+#the response is called biomass but is actually height in cm
+mossDat <- modDat[modDat$Region=="Trøndelag" & modDat$group=="moss_depth",]
+mossDat <- mossDat[!is.na(mossDat$biomass),]
+mod_moss <- lmerTest::lmer(biomass~Treatment*productivity + (1|LocalityName), 
+                        data = mossDat, REML = F)
+plot(mod_moss) # ok
+plot(mossDat$productivity, resid(mod_moss))   # ok
+plot(mossDat$Treatment, resid(mod_moss))      # ok
+summary(mod_moss)
+mod_moss_add <- update(mod_moss, .~. -Treatment:productivity)
+mod_moss_pi <- update(mod_moss_add, .~. -Treatment)
+mod_moss_exc <- update(mod_moss_add, .~. -productivity)
+AIC(mod_moss, mod_moss_add, mod_moss_exc, mod_moss_pi)
+
+
+#anova(modFS, modFS2)
+AIC(mod_moss_pi)-AIC(mod_moss)
+AIC(mod_moss_pi)-AIC(mod_moss_add)
+AIC(mod_moss_pi)-AIC(mod_moss_exc)
+
+mod_moss_pi <- lmerTest::lmer(biomass~productivity + (1|LocalityName), 
+                              data = mossDat, REML = T)
+summary(mod_moss_pi)
+ICCl <- 1.911/(1.911+7.070)
+
+
+
+
+#*****************************************
+# -Moss depth variance  ####
+mossDat2 <- aggregate(data=mossDat, biomass~LocalityName+Treatment, FUN = var)
+boxplot(mossDat2$biomass~ mossDat2$Treatment)
+mossDat2$productivity <- productivity$productivity[match(mossDat2$LocalityName, productivity$LocalityName)]
+
+mod_mossV <- lmerTest::lmer(biomass~Treatment*productivity + (1|LocalityName), 
+                           data = mossDat2, REML = F)
+plot(mod_mossV) # ok
+plot(mossDat2$productivity, resid(mod_mossV))   # ok
+plot(mossDat2$Treatment, resid(mod_mossV))      # ok
+summary(mod_mossV)
+mod_mossV_add <- update(mod_mossV, .~. -Treatment:productivity)
+mod_mossV_pi <- update(mod_mossV_add, .~. -Treatment)
+mod_mossV_exc <- update(mod_mossV_add, .~. -productivity)
+AIC(mod_mossV, mod_mossV_add, mod_mossV_exc, mod_mossV_pi)
+
+
+#anova(modFS, modFS2)
+AIC(mod_mossV_pi)-AIC(mod_mossV)
+AIC(mod_mossV_pi)-AIC(mod_mossV_add)
+AIC(mod_mossV_pi)-AIC(mod_mossV_exc)
+
+mod_mossV_pi <- lmerTest::lmer(biomass~productivity + (1|LocalityName), 
+                               data = mossDat2, REML = T)
+summary(mod_mossV_pi)
+ICCl <- 0
+
+#mossBoxDat <- aggregate(data=mossDat, biomass~LocalityName+Treatment, FUN = mean)
+#boxplot(mossBoxDat$biomass~mossBoxDat$Treatment)
+
+
+
+
+# Canopy Cover index ####
+# CCI was analysed in the 2017 ECOSYSTEMS paper. Here I only look at the within plot variance in CCI 
+# data from Trøndelag sites, in year 2016
+CCI <- read_excel("CanopyCover_SUSTHERB_export.xlsx", 
+                  sheet = "SUSTHERB_export")
+# remove thinned sites
+unique(CCI$LocalityName)
+thinned <- c("Selbu_Flub" , "Hi_tydal", "Malvik" )
+CCI2 <- CCI[!CCI$LocalityName %in% thinned,]
+
+uniquePlot <- interaction(CCI2$LocalityName, CCI2$Treatment, CCI2$Plot)
+CCI3 <- cbind(uniquePlot, CCI2)
+CCI4 <- CCI3[CCI3$Plot != "Experiment area",]
+CCI_subplot <- aggregate(data = CCI4, CanopyCoverIndex~uniquePlot+LocalityName+Treatment+Plot, FUN =mean, na.rm=T)
+CCI_plot <- aggregate(data = CCI_subplot, CanopyCoverIndex~LocalityName+Treatment, FUN =mean, na.rm=T)
+plot(CCI_plot$CanopyCoverIndex~as.factor(CCI_plot$Treatment)) # this is the significant relationship that is analysed elsewere
+
+CCI_plotVar <- aggregate(data = CCI_subplot, CanopyCoverIndex~LocalityName+Treatment, FUN = var, na.rm=T)
+plot(CCI_plotVar$CanopyCoverIndex~as.factor(CCI_plotVar$Treatment)) # this is the significant relationship that is analysed elsewere
+
+
+CCI_plotVar$productivity <- productivity$productivity[match(CCI_plotVar$LocalityName, productivity$LocalityName)]
+CCI_plotVar$Treatment <- as.factor(CCI_plotVar$Treatment)
+
+
+mod_CCIvar <- lmerTest::lmer(CanopyCoverIndex~Treatment*productivity + (1|LocalityName), 
+                            data = CCI_plotVar, REML = F)
+plot(mod_CCIvar) # ok
+plot(CCI_plotVar$productivity, resid(mod_CCIvar))   # ok
+plot(CCI_plotVar$Treatment, resid(mod_CCIvar))      # ok
+summary(mod_CCIvar)
+
+mod_CCIvar_add <- update(mod_CCIvar, .~. -Treatment:productivity)
+mod_CCIvar_pi <- update(mod_CCIvar_add, .~. -Treatment)
+mod_CCIvar_exc <- update(mod_CCIvar_add, .~. -productivity)
+AIC(mod_CCIvar, mod_CCIvar_add, mod_CCIvar_exc, mod_CCIvar_pi)
+
+
+#anova(modFS, modFS2)
+AIC(mod_CCIvar_add)-AIC(mod_CCIvar)
+AIC(mod_CCIvar_add)-AIC(mod_CCIvar_pi)
+AIC(mod_CCIvar_add)-AIC(mod_CCIvar_exc)
+
+mod_CCIvar_add <- lmerTest::lmer(CanopyCoverIndex~Treatment+productivity + (1|LocalityName), 
+                                 data = CCI_plotVar, REML = T)
+
+mod_CCIvar_pi <- update(mod_CCIvar_add, .~. -Treatment)
+mod_CCIvar_exc <- update(mod_CCIvar_add, .~. -productivity)
+anova(mod_CCIvar_add, mod_CCIvar_pi)
+anova(mod_CCIvar_add, mod_CCIvar_exc)
+
+summary(mod_CCIvar_add)
+
+
+ICCl <- 2.814e-10/(2.814e-10 + 9.319e+04)
+
+
 
 # ***********************************#
 # ***********************************#
@@ -736,8 +916,9 @@ levels(modDat3$group)
 F1 <- ggplot(data = modDat3[modDat3$group == "grasses",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour="grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   #geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
@@ -747,8 +928,9 @@ F1 <- ggplot(data = modDat3[modDat3$group == "grasses",], aes(x = productivity, 
 F2 <- ggplot(data = modDat3[modDat3$group == "large_herbs",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour = "grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
@@ -758,19 +940,21 @@ F2 <- ggplot(data = modDat3[modDat3$group == "large_herbs",], aes(x = productivi
 F3 <- ggplot(data = modDat3[modDat3$group == "small_herbs",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour = "grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
-  ylab("Relative shift in biomass\n(exclosure minus open plots)")+
+  ylab(expression(paste(Delta, " Biomass (g m"^"-2", ")")))+
   xlab("")
 #  ggtitle("Small herbs")
 F4 <- ggplot(data = modDat3[modDat3$group == "ferns",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour = "grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
@@ -780,8 +964,9 @@ F4 <- ggplot(data = modDat3[modDat3$group == "ferns",], aes(x = productivity, y 
 F5 <- ggplot(data = modDat3[modDat3$group == "shrubs",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour = "grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   #geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
@@ -791,8 +976,9 @@ F5 <- ggplot(data = modDat3[modDat3$group == "shrubs",], aes(x = productivity, y
 F6 <- ggplot(data = modDat3[modDat3$group == "biom",], aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
-  geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
-            fill="lightgreen")+
+  geom_hline(yintercept = 0, size=2, colour = "grey")+
+  #geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
+  #          fill="lightgreen")+
   #theme(text = element_text(size=15))+
   geom_point(size = 3, stroke = 2, shape =1)+
   geom_smooth(method = "lm", se = F, size = 2, colour = "black")+
@@ -869,7 +1055,7 @@ f5 <- ggplot(data = FG4[FG4$group=="shrubs",], aes(x = Treatment, y = biomass+1)
 library(cowplot)
 
 setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
-#tiff("Functional_groups_all.tiff", height = 40, width = 20, units = "cm", res=300)
+tiff("Functional_groups_all.tiff", height = 40, width = 20, units = "cm", res=300)
 
 plot_grid(ff1, F1,
           ff2, F2,
@@ -973,6 +1159,36 @@ thinned <- c("Selbu_Flub", "Hi_tydal", "Malvik")
 unique(wide2$LocalityName)
 wide2_red <- wide2[!wide2$LocalityName %in% thinned,]
 
+#save(wide2, file ="PRCdat.RData")
+
+
+#  partial PRC method on plot level data with Hellinger transformed data:
+Hell_dat <- cbind(
+  wide2[,1:5],
+  decostand(wide2[,6:ncol(wide2)], method="hellinger")
+)
+
+rda.out2 <- rda(Hell_dat[,6:ncol(Hell_dat)] ~ Hell_dat$LocalityName) # equivalent of "rda.out = rda(X ~ Condition(Z))"
+rda.out2 # location explains 34%
+#plot(rda.out2)
+rda.res2 <- as.data.frame(residuals(rda.out2) )   # does this carry only the residuals from the first axis?
+Hell_dat2 <- cbind(Hell_dat[,1:5], rda.res2)
+
+
+prc.out3 <- prc(Hell_dat2[,6:ncol(Hell_dat2)], as.factor(Hell_dat2$Treatment), 
+                as.factor(Hell_dat2$yse))
+ctrl <- how(plots = Plots(Hell_dat2$LocalityName),
+            within = Within(type = "series"), nperm = 1000    )
+anova(prc.out3,permutations = ctrl)
+sum_mod_prc3 <- summary(prc.out3, scaling = 2)
+
+#species <- colSums(rda.res)
+par(mar=c(5,5,10,10))
+prc.out3 # time: 11%; treatment = 2%; residual variance = 87%
+
+#tiff("PRC.tiff", height = 10, width = 10, units = "cm", res=300)
+plot(prc.out3, select = abs(sum_mod_prc3$sp) > 0.05, scaling = 2,legpos = NULL, xlab = "Year since exclosure")
+dev.off()
 
 
 
@@ -1005,7 +1221,7 @@ sum_mod_prc_sub <- summary(prc.out.sub, scaling = 2)
 par(mar=c(5,5,10,10))
 
 
-#tiff("PRC.tiff", height = 10, width = 10, units = "cm", res=300)
+
 plot(prc.out.sub, select = abs(sum_mod_prc_sub$sp) > 0.12, scaling = 2, 
      legpos = NULL, xlab = "Year since exclosure")
 dev.off()
@@ -1040,15 +1256,17 @@ rda.out <- rda(log(wide[,5:ncol(wide)]+1) ~ wide$LocalityName) # equivalent of "
 rda.out # location explains 70%
 # unconstrained axes  all have equally high eigenvalues!
 rda.res <- residuals(rda.out)    # does this carry only the residuals from the first axis?
+rda.resX <- as.data.frame(rda.res)
+wideX <- cbind(wide[,1:4], rda.resX)
+head(wideX)
+prc.out2 <- prc(wideX[,5:ncol(wideX)], as.factor(wideX$Treatment), 
+               as.factor(wideX$yse))
 
-prc.out2 <- prc(rda.res, as.factor(wide$Treatment), 
-               as.factor(wide$yse))
-
-ctrl <- how(plots = Plots(wide$LocalityName),
+ctrl <- how(plots = Plots(wideX$LocalityName),
             within = Within(type = "series"), nperm = 1000    )
 anova(prc.out2,permutations = ctrl)
 
-sum_mod_prc2 <- summary(prc.out, scaling = 2)
+sum_mod_prc2 <- summary(prc.out2, scaling = 2)
 #species <- colSums(rda.res)
 par(mar=c(5,5,10,10))
 prc.out2
@@ -1056,24 +1274,6 @@ plot(prc.out2, select = abs(sum_mod_prc2$sp) > 0.1, scaling = 2)
 
 
 
-# compare with partial PRC method on plot level data:
-rda.out2 <- rda(log(wide2[,6:ncol(wide2)]+1) ~ wide2$LocalityName) # equivalent of "rda.out = rda(X ~ Condition(Z))"
-rda.out2 # location explains 34%
-plot(rda.out2)
-rda.res2 <- residuals(rda.out2)    # does this carry only the residuals from the first axis?
-
-prc.out3 <- prc(rda.res2, as.factor(wide2$Treatment), 
-                as.factor(wide2$yse))
-ctrl <- how(plots = Plots(wide2$LocalityName),
-            within = Within(type = "series"), nperm = 1000    )
-anova(prc.out3,permutations = ctrl)
-sum_mod_prc3 <- summary(prc.out3, scaling = 2)
-
-#species <- colSums(rda.res)
-par(mar=c(5,5,10,10))
-prc.out3 # time: 11%; treatment = 2%; residual variance = 87%
-plot(prc.out3, select = abs(sum_mod_prc3$sp) > 0.05, scaling = 2)
-# all methods look similar
 
 
 
@@ -1214,26 +1414,32 @@ levels(dist_out3$Treatment)[levels(dist_out3$Treatment) == "UB"] <- "Exclosures"
 
 
 # get mean Jaccard distance per location and year
-Jacc <- aggregate(data = dist_out3, nJaccard~Region+LocalityName+yse+Treatment, FUN = mean)
+Jacc <- aggregate(data = dist_out3, nJaccard~yse+Treatment, FUN = mean)
+Jacc$SE <- aggregate(data = dist_out3, nJaccard~yse+Treatment, FUN = std)[,3]
 summary(Jacc)
 
 Jacc$nyse <- as.numeric(as.character(Jacc$yse))
 
 
-
 jacc <- ggplot(data = Jacc, aes(x=nyse, y=nJaccard, group=Treatment, linetype=Treatment))+
   theme_bw()+
   xlab("Years since exclusion")+
-  ylab("Mean Jaccard dissimilarity")+
-  geom_smooth(method = "lm", size = 2, alpha = 0.2, colour = "black", se=F)+
-  geom_point(data = Jacc[Jacc$Treatment == "Open plots",], aes(y=nJaccard), shape=1, position = position_nudge(x = -0.1))+
-  geom_point(data = Jacc[Jacc$Treatment == "Exclosures",], aes(y=nJaccard), shape=2, position = position_nudge(x = 0.1))+
-  guides(linetype=FALSE, shape = FALSE)
-
-
-
-Jacc2 <- Jacc[Jacc$yse=="8",]
+  ylab("Mean within-plot\nJaccard dissimilarity")+
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=nJaccard+SE, ymin=nJaccard-SE, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  guides(linetype = FALSE, shape=FALSE)+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))
   
+
+
+
+
+# plot treatment difference against site productivity:
+Jacc <- aggregate(data = dist_out3, nJaccard~yse+Treatment+LocalityName, FUN = mean)
+Jacc2 <- Jacc[Jacc$yse=="8",]
+Jacc$nyse <- as.numeric(as.character(Jacc$yse))
+
 Jacc3 <- aggregate(data = Jacc2,
                      nJaccard~Treatment+LocalityName,
                      FUN = mean)
@@ -1265,7 +1471,8 @@ jacc2 <- ggplot(data = Jacc4, aes(x = productivity, y = diff))+
 library(lmerTest)
 
 # prepare data:
-JaccModDat <- Jacc[Jacc$yse == "8",]
+JaccMod <- aggregate(data = dist_out3, nJaccard~yse+Treatment+LocalityName+Region, FUN = mean)
+JaccModDat <- JaccMod[JaccMod$yse == "8",]
 JaccModDat$productivity <- productivity$productivity[match(JaccModDat$LocalityName, productivity$LocalityName)]
 
 # run full model:
@@ -1280,6 +1487,8 @@ modJacc_add <- update(modJacc, .~. -Treatment:productivity)
 modJacc_pi <- update(modJacc_add, .~. -Treatment)
 modJacc_exc  <- update(modJacc_add, .~. -productivity)
 AIC(modJacc, modJacc_add, modJacc_exc, modJacc_pi)
+BIC(modJacc, modJacc_add, modJacc_exc, modJacc_pi)
+
 #anova(modFS, modFS2)
 AIC(modJacc_exc)-AIC(modJacc)
 AIC(modJacc_exc)-AIC(modJacc_add)
@@ -1538,6 +1747,30 @@ cdatBM[, NLG_taxa] <- cdat[, NLG_taxa]  * 5.9653    + 0.8747
 vasc_names <- names(cdatBM[,16:ncol(cdatBM)])[!names(cdatBM[,16:ncol(cdatBM)]) %in% mosses]
 
 
+# get species lists with percentage occurence at location level in 
+spListDat <- cdatBM[cdatBM$yse=="8",16:ncol(cdatBM)]
+spList <- colSums(spListDat>0, na.rm=T)
+spList <- as.data.frame(spList)
+spList$Functional_type <- NULL
+spList$Taxa <- rownames(spList)
+spList$Functional_type[spList$Taxa %in% mosses] <- "Bryophyte"
+spList$Functional_type[spList$Taxa %in% shrubs_fg] <- "Dwarf shrub"
+spList$Functional_type[spList$Taxa %in% ferns_fg] <- "Fern"
+spList$Functional_type[spList$Taxa %in% graminoids_fg] <- "Graminoid"
+spList$Functional_type[spList$Taxa %in% small_herbs] <- "Small herb"
+spList$Functional_type[spList$Taxa %in% TH_taxa] <- "Tall herb"
+spList$Functional_type[spList$Taxa== "Luzula pilosa"] <- "Graminoid"
+colnames(spList)[colnames(spList) == "spList"] <- "Frequency"
+spList <- spList[order(spList$Frequency, decreasing = T),]
+spList <- spList[spList$Frequency >2,]
+spList$relativeFrequency <- spList$Frequency/nrow(spListDat)
+datX <- cdatBM[cdatBM$yse=="8" & cdatBM$Region == "Trøndelag",]
+spList$relativeFrequency[spList$Functional_type == "Bryophyte"] <- spList$Frequency[spList$Functional_type == "Bryophyte"]/nrow(datX)
+spList <- spList[order(spList$relativeFrequency, decreasing = T),]
+
+#write.csv(spList, file = "speciesList.csv", row.names = F)
+
+
 # Total species richness
 SR <- rowSums(cdatBM[,16:ncol(cdatBM)]>0, na.rm=T)
 
@@ -1563,40 +1796,47 @@ Shannon_vasc <- diversity(cdatBM[,vasc_names], index = "shannon")
 cdatBM <- cbind(Shannon_moss, Shannon_vasc, cdatBM)
 
 
-cdatBM_plot <- aggregate(data = cdatBM, cbind(SR,biom,MSR,VSR, Shannon_vasc, Shannon_moss)~Region+LocalityName+yse+Treatment, FUN = mean)
+cdatBM_site <- aggregate(data = cdatBM, cbind(SR,biom,MSR,VSR, Shannon_vasc, Shannon_moss)~yse+Treatment+LocalityName, FUN = mean)
+cdatBM_trt <- aggregate(data = cdatBM_site, cbind(SR,biom,MSR,VSR, Shannon_vasc, Shannon_moss)~yse+Treatment, FUN = mean)
+cdatBM_trt$SE_VSR <- aggregate(data = cdatBM_site, cbind(VSR)~yse+Treatment, FUN = std)[,"VSR"]
+cdatBM_trt$SE_ShannonVasc <- aggregate(data = cdatBM_site, cbind(Shannon_vasc)~yse+Treatment, FUN = std)[,"Shannon_vasc"]
+
+
 
 #tiff("Vasc_SR_and_shannon.tiff", height = 15, width = 10, res = 300, units = "cm")
-
-div1 <- ggplot(data = cdatBM_plot, aes(x = yse, group = Treatment, linetype = Treatment))+
+div1 <- ggplot(data = cdatBM_trt, aes(x = yse, y= VSR, group = Treatment, linetype = Treatment))+
   theme_bw()+
-  geom_point(data = cdatBM_plot[cdatBM_plot$Treatment == "B",], aes(y=VSR), shape=1, position = position_nudge(x = -0.1))+
-  geom_point(data = cdatBM_plot[cdatBM_plot$Treatment == "UB",], aes(y=VSR), shape=2, position = position_nudge(x = 0.1))+
-  geom_smooth(aes(y=VSR), method = "lm", colour = "black", se=F)+
-  ylab("Vascular plant\nspecies richness") +xlab("")+
-  guides(linetype=FALSE, shape = FALSE)
+  ylab("Mean vascular plant\nspecies richness") +
+  xlab("")+
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax=VSR+SE_VSR, ymin=VSR-SE_VSR, linetype = NULL), size=1.1, width=0.5, position=pd)+
+  theme(legend.justification = c(0.99,0.01), 
+        legend.position = c(0.99,0.01),
+        #legend.background = element_blank(),
+        legend.key.width = unit(3,"line"),
+        legend.text=element_text(size=12),
+        legend.title = element_blank())+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))
 
-div2 <- ggplot(data = cdatBM_plot, aes(x = yse, group = Treatment, linetype = Treatment))+
+                  
+div2 <- ggplot(data = cdatBM_trt, aes(x = yse, y=Shannon_vasc,group = Treatment, linetype = Treatment))+
   theme_bw()+
-  geom_point(data = cdatBM_plot[cdatBM_plot$Treatment == "B",], aes(y=Shannon_vasc), shape=1, position = position_nudge(x = -0.1))+
-  geom_point(data = cdatBM_plot[cdatBM_plot$Treatment == "UB",], aes(y=Shannon_vasc), shape=2, position = position_nudge(x = 0.1))+
-  #geom_smooth(aes(y=Shannon_vasc), method = "lm", colour = "black", se=F)+
-  ylab("Vascular plant\nShannon entropy") +xlab("Years since exclosure")+
-  guides(linetype=FALSE, shape = FALSE)
+  ylab("Mean vascular plant\nShannon entropy") +
+  xlab("")+
+  guides(linetype=FALSE, shape = FALSE)+
+  geom_line(size=1, position=pd)+ 
+  geom_point(size =3, position=pd, aes(shape=Treatment))+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  geom_errorbar(aes(ymax=Shannon_vasc+SE_ShannonVasc, ymin=Shannon_vasc-SE_ShannonVasc, linetype = NULL), size=1.1, width=0.5, position=pd)
 
 
 
-setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
-#tiff("diveristy.tiff", height = 10, width = 10, units = "cm", res=300)
-plot_grid(div1, div2,
-          ncol=1)
-dev.off()  
 
-#tiff("shannon_time_and.tiff", height = 10, width = 10, units = "cm", res=300)
-div2
-dev.off()
 
-tiff("alpha_beta.tiff", height = 10, width = 10, units = "cm", res=300)
-plot_grid(div1, jacc,
+tiff("alpha2_beta.tiff", height = 20, width = 10, units = "cm", res=300)
+plot_grid(div1, div2, jacc,
           ncol=1, align = "hv")
 dev.off()
 
@@ -1608,25 +1848,25 @@ dev.off()
 
 
 # VSR Interactio plot
-cdatBM_plot2 <- aggregate(data = cdatBM_plot,
+cdatBM_site2 <- aggregate(data = cdatBM_site,
                      VSR~Treatment+LocalityName,
                      FUN = mean)
-cdatBM_plot3 <- dcast(data = cdatBM_plot2, 
+cdatBM_site3 <- dcast(data = cdatBM_site2, 
                  LocalityName~Treatment,
                  value.var = "VSR")
-cdatBM_plot3$diff <- cdatBM_plot3$UB - cdatBM_plot3$B
-cdatBM_plot3$productivity <- productivity$productivity[match(cdatBM_plot3$LocalityName, productivity$LocalityName)]
+cdatBM_site3$diff <- cdatBM_site3$UB - cdatBM_site3$B
+cdatBM_site3$productivity <- productivity$productivity[match(cdatBM_site3$LocalityName, productivity$LocalityName)]
 
 
 
 
-div11 <- ggplot(data = cdatBM_plot3, aes(x = productivity, y = diff))+
+div11 <- ggplot(data = cdatBM_site3, aes(x = productivity, y = diff))+
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))+
   geom_rect(data=NULL,aes(xmin=-Inf,xmax=Inf,ymin=-Inf,ymax=0),
             fill="lightgreen")+
   geom_point(size = 3, stroke = 2, shape =1)+
-  geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
+  #geom_smooth(method = "lm", se = T, size = 2, colour = "black")+
   ylab("")+
   xlab("Site productivity")
 #  ggtitle("Large herbs")

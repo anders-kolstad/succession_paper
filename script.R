@@ -352,9 +352,169 @@ grid.draw(rbind(ggplotGrob(Supp_SA), ggplotGrob(Supp_PA),
 
 # ******************************************#
 # ******************************************#
+# Large trees over time ####
+# ******************************************#
+# ******************************************#
+
+# Standardise against year 1.
+# Nor data for year 0, but trees dont reach 3, in one year
+head(SA2)
+allSp <- rbind(SA2, PA2, PS2, BP2)
+head(allSp)
+#tapply(allSp$Quantity, allSp$fH,FUN =mean)
+#unique(allSp$Taxa)
+allSp$Taxa[allSp$Taxa=="Betula pendula (Lavlandbjørk)" | allSp$Taxa=="Betula pubescens (Bjørk)"] <- "Birch"
+allSp$Taxa[allSp$Taxa=="Sorbus aucuparia (Rogn)" ] <- "Rowan"
+allSp$Taxa[allSp$Taxa=="Picea abies (Gran)" ] <- "Spruce"
+allSp$Taxa[allSp$Taxa=="Pinus sylvestris (Furu)"] <- "Pine"
+#unique(allSp$Taxa)
+
+
+allSp2 <- dcast(data = allSp, Taxa+LocalityName+Plot+fH+Region+Treatment~yse, value.var = "Quantity", fun.aggregate = sum) # sum because there are two birches
+#head(allSp2, 20)   # combine birches
+#tail(allSp2)
+#table(allSp2$LocalityName, allSp2$Region)
+allSp2$`1` <- allSp2$`1`-allSp2$`1`
+allSp2$`2` <- allSp2$`2`-allSp2$`1`
+allSp2$`3` <- allSp2$`3`-allSp2$`1`
+allSp2$`4` <- allSp2$`4`-allSp2$`1`
+allSp2$`5` <- allSp2$`5`-allSp2$`1`
+allSp2$`6` <- allSp2$`6`-allSp2$`1`
+allSp2$`7` <- allSp2$`7`-allSp2$`1`
+allSp2$`8` <- allSp2$`8`-allSp2$`1`
+allSp2$`9` <- allSp2$`9`-allSp2$`1`
+head(allSp2)   # just chance?
+tail(allSp2)
+
+
+# melt
+allSp3 <- melt(data=allSp2, id.vars = c("Taxa", "LocalityName", "Plot", "fH", "Region", "Treatment"),
+               measure.vars = c('1','2','3','4','5','6','7'), variable.name = "yse", value.name = "Quantity")
+#head(allSp3)
+#table(allSp3$Taxa, allSp3$)
+#tapply(X=allSp3$Quantity, allSp3$Taxa,FUN =mean)   # why does it go down?
+#tapply(X=allSp3$Quantity, allSp3$fH,FUN =sum)
+
+allSp3$fH <- as.numeric(as.character(allSp3$fH))
+allSp3 <- allSp3[allSp3$fH>5,]  # defining large trees as those above 2.25 (make the data less zero inflated)
+allSp3 <- aggregate(data = allSp3, Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa, FUN = sum)
+
+# get means per treatment
+
+
+allSp4 <- aggregate(data = allSp3, Quantity~LocalityName+Treatment+yse+Taxa, FUN = mean, drop = T)   # drop = T adds back in the sites where a species is rare
+allSp5 <- aggregate(data = allSp4, Quantity~Treatment+yse+Taxa, FUN = mean, na.rm=T)
+se <- function(x) sd(x, na.rm=T)/sqrt(length(x))
+allSp5$SE <- aggregate(data = allSp4, Quantity~Treatment+yse+Taxa, FUN = se)[,"Quantity"]
+allSp5$yse <- as.numeric(as.character(allSp5$yse))
+#allSp6 <- allSp5[allSp5$yse < 8,]
+
+
+pd <- position_dodge(width=0.4)
+
+
+LargeTrees <- ggplot(data=allSp5 , aes(y=Quantity, x=yse, group=Treatment, linetype=Treatment))+
+  geom_line(size=1, position = pd)+
+  geom_point(size=3, position = pd, aes(shape=Treatment))+
+  facet_wrap(~ Taxa, ncol = 4)+
+  geom_errorbar(aes(ymax = Quantity+SE, ymin = Quantity-SE, linetype=NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  #guides(linetype=F, shape=F)+
+  ylab(expression(atop("Mean number of trees","above 2.25 m per hectare")))+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))+
+  scale_x_continuous(name="Years since exclusion", breaks=c(1,3,5,7))+
+    theme(legend.justification = c(0.01, 0.99), 
+          legend.position = c(0.01, 0.99),
+          #legend.background = element_blank(),
+          legend.key.width = unit(3,"line"),
+          legend.text=element_text(size=8),
+          legend.title = element_blank())
+
+setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
+tiff("Large_trees_over_time.tiff", height = 10, width = 25, units = "cm", res=300)
+LargeTrees
+dev.off()
+
+
+
+allSp_datT <- allSp3[allSp3$Region== "Trøndelag" & allSp3$yse=="7",]
+allSp_datT2 <- allSp3[allSp3$Region== "Telemark" & allSp3$yse=="7",]
+
+allSp_datT$Region <- factor(allSp_datT$Region)
+allSp_datT2$Region <- factor(allSp_datT2$Region)
+
+
+allSp_dat <- rbind(
+  aggregate(data = allSp_datT, Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa, FUN = mean, drop = T),   # I first used drop F, but this is done already previously
+  aggregate(data = allSp_datT2, Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa, FUN = mean, drop = T)
+)
+
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+allSp_dat$productivity <- productivity$productivity[match(allSp_dat$LocalityName, productivity$LocalityName)]
+
+# trying to model here....
+# tried normal approach, but there are too many zeros.
+birch <- lmerTest::lmer(data=allSp_dat[allSp_dat$Taxa== "Birch",],
+                        log(Quantity+1)~Treatment*productivity + (1|Region/LocalityName), REML=F)
+
+plot(birch)
+plot(allSp_dat$Treatment[allSp_dat$Taxa== "Birch"], resid(birch)) # not good
+
+
+
+allSp_dat2 <- aggregate(data= allSp_dat, Quantity~Region+LocalityName+Treatment+Taxa, FUN = mean)
+
+# trying simle KW test here (ignoring site productivity)
+kruskal.test(data= allSp_dat2[allSp_dat2$Taxa=="Birch",],
+             Quantity~Treatment)
+kruskal.test(data= allSp_dat2[allSp_dat2$Taxa=="Pine",],
+             Quantity~Treatment)
+kruskal.test(data= allSp_dat2[allSp_dat2$Taxa=="Spruce",],
+             Quantity~Treatment)
+kruskal.test(data= allSp_dat2[allSp_dat2$Taxa=="Rowan",],
+             Quantity~Treatment)
+
+allSp_dat3 <- dcast(data = allSp_dat2, Region+LocalityName+Taxa~Treatment, value.var = "Quantity", fun.aggregate = mean)
+allSp_dat3$diff <- allSp_dat3$UB-allSp_dat3$B
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+allSp_dat3$productivity <- productivity$productivity[match(allSp_dat3$LocalityName, productivity$LocalityName)]
+
+# tried modelling here.
+# using the treatment difference as the response
+birch <- lm(data=allSp_dat3[allSp_dat3$Taxa== "Birch",],
+                        diff~productivity)
+plot(birch)   # not looking good
+# variance increases with productivity
+
+
+
+LargeTrees2 <- ggplot(data = allSp_dat3, aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_hline(yintercept = 0, size=2, colour="grey")+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  facet_wrap(~Taxa, ncol=4)+
+  theme(strip.text.x = element_blank())+
+  ylab(expression(atop(paste(Delta, " Mean number of large trees"), "per hectare (year 7 only)")))+
+  scale_x_continuous(name="Site productivity", breaks=c(0.25,0.5,0.75))
+
+
+library(cowplot)
+setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
+#tiff("supp_Large_trees_over_time.tiff", height = 15, width = 30, units = "cm", res=300)
+plot_grid(LargeTrees, LargeTrees2, ncol=1, align="hv", rel_heights = c(1,0.8))
+dev.off()  
+
+
+# ******************************************#
+# ******************************************#
 # setting up data for demography plots ####
 # ******************************************#
 # ******************************************#
+
 
 # get means per treatment
 SA3 <- aggregate(data = SA2,
@@ -372,30 +532,23 @@ BP3 <- aggregate(data = BP2,
 SC3 <- aggregate(data = SC2,
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
-#par(mfrow=c(3,2))
-#hist(SA3$Quantity)
-#hist(PA3$Quantity)
-#hist(PS3$Quantity)
-#hist(BP3$Quantity)
-#hist(SC3$Quantity)
-#table(SA3$Treatment, SA3$yse, SA3$fH)
-
-
-# DONT RUN!!! (unless making supplementary figure)
-# get means per treatment and region
-levels(density$Region)
-
-# run one region at the time and make figures below.
-MyRegion <- "Trøndelag"
-MyRegion <- "Telemark"
-#MyRegion <- "Hedmark"
-
 
 thinned <- c("Hi_tydal", "Malvik", "Selbu_Flub")
 SA2x <- SA2[!SA2$LocalityName %in% thinned,]
 PA2x <- PA2[!PA2$LocalityName %in% thinned,]
 PS2x <- PS2[!PS2$LocalityName %in% thinned,]
 BP2x <- BP2[!BP2$LocalityName %in% thinned,]
+
+
+
+# DONT RUN!!! (unless making supplementary figure)
+# get means per treatment and region
+levels(density$Region)
+# run one region at the time and make figures below.
+MyRegion <- "Trøndelag"
+MyRegion <- "Telemark"
+#MyRegion <- "Hedmark"
+
 
 SA3 <- aggregate(data = subset(SA2x, Region == MyRegion),
                  Quantity~Treatment+yse+fH,

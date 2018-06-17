@@ -102,9 +102,267 @@ density$Quantity <- density$Quantity/(pi*4)*10000
 #table(density$fH, density$Region)
 #table(density$fH, density$LocalityName)
 
-# subsetting different species before aggregating to reduce data size
 density$fTaxa <- as.factor(density$Taxa)
 levels(density$fTaxa)
+table(density$fTaxa)
+
+table(density$fTaxa, density$yse)
+tapply(density$Q_circle, list(density$yse, density$Taxa, density$Treatment), FUN = sum)
+# 1015 rowan counted in open plot year 1
+# 1136 for exclosures
+temp <- density[density$Taxa=="Sorbus aucuparia (Rogn)" & density$yse == 7,]
+tapply(temp$Q_circle, list(temp$Treatment, temp$fH), FUN = sum)
+rm(temp)
+# in year 7 the talles rowan was the single individual in height call 4 (150-200 cm)
+593/(593 +170+  17+   1)
+#75.9% of individuals in class 1 after 7 years
+
+# Compared to 
+130+104+44+24
+# 302 rown in excloser reaching this height or greater. 
+(130+104+44+24)/(217+ 204+ 167+ 130+ 104+ 44+ 24)  #33.9%
+217/(217+ 204+ 167+ 130+ 104+ 44+ 24)  #24.4%
+# ************************************#
+# Canopy dominance  ####
+# % decidious trees in the canopy
+# Canopy defined as the two top height classes at any given time
+# ************************************#
+RAT <- density
+#RAT$nH <- as.numeric(as.character(RAT$fH))
+#head(RAT)
+#RAT <- RAT[RAT$nH>5,]
+
+
+# sum of stems per circle
+RAT <- aggregate(data = RAT,
+                 Quantity~Region+LocalityName+Treatment+Plot+yse+Taxa+fH,
+                 FUN = sum, drop = T) 
+
+
+RAT <- RAT[RAT$yse < 8,]
+RAT <- RAT[RAT$Taxa != "No occurrence (Ingen)",]
+
+# remove remnant trees (as best we can):
+RATcast <- dcast(data = RAT, Taxa+Region+LocalityName+Plot+Treatment+fH~yse, value.var = "Quantity", fun.aggregate = sum) 
+
+RATcast2 <- RATcast
+RATcast <- RATcast[RATcast$fH== "7",]
+RATcast$fH <- factor(RATcast$fH)
+
+for(i in 8:ncol(RATcast)){
+  RATcast[,i] <- RATcast[,i]-RATcast[,7]
+}
+
+RATcast$`1` <- 0  # No 3m trees in year 1
+RATcast3 <- rbind(RATcast2[RATcast2$fH!="7",], RATcast)
+
+
+RAT <- melt(data=RATcast3, id.vars = c("Taxa", "Region", "LocalityName", "Plot", "Treatment", "fH"),
+               measure.vars = c('1','2','3','4','5','6','7'), variable.name = "yse", value.name = "Quantity")
+RAT$Quantity[RAT$Quantity<0] <- 0
+RAT <- RAT[RAT$Quantity!=0,]
+
+table(RAT$fH, RAT$yse)
+
+
+
+RAT$DecOrCon <- ifelse(   RAT$Taxa == "Betula pendula (Lavlandbjørk)" |
+                          RAT$Taxa == "Betula pubescens (Bjørk)" |
+                          RAT$Taxa == "Populus tremula (Osp)" |
+                          RAT$Taxa == "Salix caprea (Selje)" |
+                          RAT$Taxa == "Sorbus aucuparia (Rogn)", "decidious", "coniferous")
+
+
+  
+RAT2 <- aggregate(data = RAT, Quantity~Region+LocalityName+Plot+Treatment+fH+yse+DecOrCon,
+                  FUN = sum)
+RAT3 <- dcast(data = RAT2,
+              Region+LocalityName+Plot+Treatment+yse+fH~DecOrCon,
+              value.var = "Quantity",
+              fun.aggregate = sum)
+
+
+
+# Now I want to keep only the two highest growth categories for each plot:time
+RAT3$plot_time <- paste(RAT3$LocalityName, RAT3$Treatment, RAT3$Plot, RAT3$yse, sep="_")
+length(unique(RAT3$plot_time))
+
+RAT3$nH <- as.numeric(as.character(RAT3$fH))
+tempDat <- RAT3[order(-RAT3$nH),]
+
+df <- NULL
+
+for(i in unique(RAT3$plot_time)){
+  tempDat2  <- tempDat[tempDat$plot_time==paste(i),]
+  ifelse(nrow(tempDat2)>1,  tempDat3 <- tempDat2[1:2,], tempDat3 <- tempDat2[1,])
+  ifelse(tempDat3$nH[1] - tempDat3$nH[2] > 1, tempDat3 <- tempDat3[1,], tempDat3)
+  df        <- rbind(df, tempDat3) 
+}
+table(df$LocalityName, df$yse)   # seems as if some sites dont have many trees at all...
+
+
+# option B, with canopy = largest height class only
+#for(i in unique(RAT3$plot_time)){
+#  tempDat2  <- tempDat[tempDat$plot_time==paste(i),]
+#  tempDat3 <- tempDat2[1,]
+#  df        <- rbind(df, tempDat3) 
+#}
+
+#View(RAT3[RAT3$LocalityName=="Drangedal3" & RAT3$yse=="1",])
+#table(RAT3$LocalityName, RAT3$yse)
+#table(RAT2$LocalityName, RAT2$yse)
+#table(RAT$LocalityName, RAT$yse)
+    # seems to be the case
+
+RATagg <- aggregate(cbind("Coniferous" = df$coniferous, "Decidious" = df$decidious), 
+                    by= list("Region" = df$Region,
+                             "LocalityName" = df$LocalityName,
+                             "Plot" = df$Plot,
+                             "Treatment" = df$Treatment,
+                             "yse" = df$yse,
+                             "plot_time" = df$plot_time), FUN = mean)
+
+RATagg$decidiousness <- (RATagg$Decidious/(RATagg$Decidious+RATagg$Coniferous))*100   
+summary(RATagg$decidiousness)
+
+
+
+RAT_plot <- aggregate(data = RATagg, decidiousness~Treatment+yse, FUN = mean, na.rm=T)
+se <- function(x) sd(x, na.rm=T)/sqrt(length(x))
+RAT_plot$SE <- aggregate(data = RATagg, decidiousness~Treatment+yse, FUN = se)[,"decidiousness"]
+RAT_plot$yse <- as.numeric(as.character(RAT_plot$yse))
+
+
+
+pd <- position_dodge(width=0.4)
+
+canopyDom <- ggplot(data=RAT_plot , aes(y=decidiousness, x=yse, group=Treatment, linetype=Treatment))+
+  geom_line(size=1, position = pd)+
+  geom_point(size=3, position = pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax = decidiousness+SE, ymin = decidiousness-SE, linetype=NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  ylab("% deciduous trees in the canopy")+
+  scale_x_continuous(name="Years since exclusion", breaks=c(1,3,5,7))+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))+
+  guides(linetype = F, shape = F)
+  #theme(legend.justification = c(0.01, 0.01), 
+   #     legend.position = c(0.01, 0.01),
+    #    #legend.background = element_blank(),
+     #   legend.key.width = unit(3,"line"),
+      #  legend.text=element_text(size=8),
+       # legend.title = element_blank())
+
+#tiff("decidiousness.tiff", height = 15, width = 10, units = "cm", res = 300)
+canopyDom
+dev.off()
+RAT_plot[RAT_plot$yse==7,]
+ 
+  #Treatment yse decidiousness       SE
+  #13         B   7      37.40404 3.598741
+  #14        UB   7      60.53638 3.578768
+
+
+# Looking at the differences between regions
+RAT_plot2     <- aggregate(data = RATagg, decidiousness~Region+LocalityName+Treatment+yse, FUN = mean, na.rm=T)
+RAT_plot3 <- aggregate(data = RATagg, decidiousness~Region+Treatment+yse, FUN = mean, na.rm=T)
+RAT_plot3$SE  <- aggregate(data = RATagg, decidiousness~Region+Treatment+yse, FUN = se)[,"decidiousness"]
+
+ggplot(data=RAT_plot3 , aes(y=decidiousness, x=yse, group=Treatment, linetype=Treatment))+
+  geom_line(size=1, position = pd)+
+  geom_point(size=3, position = pd, aes(shape=Treatment))+
+  geom_errorbar(aes(ymax = decidiousness+SE, ymin = decidiousness-SE, linetype=NULL), size=1.1, width=0.5, position=pd)+
+  theme_bw()+
+  ylab("% Decidiousness")+
+  xlab("Years since exclosure")+
+  scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
+  scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))+
+  theme(legend.justification = c(0.01, 0.99), 
+        legend.position = c(0.01, 0.99),
+        #legend.background = element_blank(),
+        legend.key.width = unit(3,"line"),
+        legend.text=element_text(size=8),
+        legend.title = element_blank())+
+  facet_wrap(~Region)
+
+
+# Interaction plot
+RAT_plot4 <- RAT_plot2[RAT_plot2$yse == "7",]
+RAT_plot4 <- dcast(data = RAT_plot4, LocalityName~Treatment, value.var = "decidiousness")
+RAT_plot4$diff <- RAT_plot4$UB-RAT_plot4$B
+
+# Adding productivity
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+RAT_plot4$productivity <- productivity$productivity[match(RAT_plot4$LocalityName, productivity$LocalityName)]
+
+
+RAT_INT <- ggplot(data = RAT_plot4, aes(x = productivity, y = diff))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  geom_hline(yintercept = 0, size=2, colour="grey")+
+  geom_point(size = 3, stroke = 2, shape =1)+
+  theme(strip.text.x = element_blank())+
+  ylab("% deciduous trees in the canopy")+
+  scale_x_continuous(name="Site productivity", breaks=c(0.25,0.5,0.75))
+
+
+
+#  -> LMM ####
+# Adding productivity
+setwd("M:\\Anders L Kolstad\\R\\R_projects\\succession_paper")
+load("prod_index_telemark_and_trondelag.RData")
+RATmdat <- RATagg
+RATmdat <- RATmdat[RATmdat$yse=="7",]
+RATmdat$productivity <- productivity$productivity[match(RATmdat$LocalityName, productivity$LocalityName)]
+
+plot(RATmdat$decidiousness)
+
+library(lmerTest)
+RATIOlmm <- lmerTest::lmer(decidiousness~Treatment*productivity + (1|Region/LocalityName), 
+                        data = RATmdat, REML = F)
+plot(RATIOlmm) # tja
+plot(RATmdat$productivity, resid(RATIOlmm))   # ok
+plot(RATmdat$Treatment, resid(RATIOlmm))      # ok
+plot(as.numeric(RATmdat$Treatment), resid(RATIOlmm))    
+
+summary(RATIOlmm)
+
+RATIOlmm_add <- update(RATIOlmm, .~. -Treatment:productivity)
+RATIOlmm_p <- update(RATIOlmm_add, .~. -Treatment)
+RATIOlmm_t <- update(RATIOlmm_add, .~. -productivity)
+AIC(RATIOlmm, RATIOlmm_add, RATIOlmm_p, RATIOlmm_t)
+AIC(RATIOlmm)-AIC(RATIOlmm_add)
+AIC(RATIOlmm)-AIC(RATIOlmm_p)
+AIC(RATIOlmm)-AIC(RATIOlmm_t)
+
+
+
+# removing interaction:
+anova(RATIOlmm, RATIOlmm_add) #3.3652      1    0.06659 .
+
+# I think I'll use the exclusion only  model
+AIC(RATIOlmm_t)-AIC(RATIOlmm)
+AIC(RATIOlmm_t)-AIC(RATIOlmm_p)
+AIC(RATIOlmm_t)-AIC(RATIOlmm_add)
+
+# refit with REML
+RATIOlmm_t <- lmerTest::lmer(decidiousness~Treatment + (1|Region/LocalityName), 
+                           data = RATmdat, REML = T)
+plot(RATIOlmm_t) # tja
+plot(RATmdat$productivity, resid(RATIOlmm_t))   # ok
+plot(RATmdat$Treatment, resid(RATIOlmm_t))      # ok
+summary(RATIOlmm_t) # 214.220   5.110 7.12e-07 ***
+
+
+
+ICCr <- 2.006e-11/( 3.319e+02+2.006e-11+1.260e+03)
+ICCl <-  3.319e+02/( 3.319e+02+2.006e-11+1.260e+03)
+
+
+
+# subsetting different species before aggregating to reduce data size
+
 SA <- density[density$fTaxa == "Sorbus aucuparia (Rogn)",]
 PA <- density[density$fTaxa == "Picea abies (Gran)",]
 PS <- density[density$fTaxa == "Pinus sylvestris (Furu)",]
@@ -416,28 +674,38 @@ pd <- position_dodge(width=0.4)
 LargeTrees <- ggplot(data=allSp5 , aes(y=Quantity, x=yse, group=Treatment, linetype=Treatment))+
   geom_line(size=1, position = pd)+
   geom_point(size=3, position = pd, aes(shape=Treatment))+
-  facet_wrap(~ Taxa, ncol = 4)+
+  facet_wrap(~ Taxa, ncol = 1)+
   geom_errorbar(aes(ymax = Quantity+SE, ymin = Quantity-SE, linetype=NULL), size=1.1, width=0.5, position=pd)+
   theme_bw()+
   #guides(linetype=F, shape=F)+
-  ylab(expression(atop("Mean number of trees","above 2.25 m per hectare")))+
+  #ylab(expression(atop("Mean number of trees","above 2 m per hectare")))+
+  ylab("Mean number of trees above 2 m per hectare")+
   scale_linetype_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(1,2))+
   scale_shape_manual(breaks = c("B", "UB"), labels = c("Open plots", "Exclosures"), values=c(16,17))+
-  scale_x_continuous(name="Years since exclusion", breaks=c(1,3,5,7))+
+  scale_x_continuous(name="", breaks=c(1,3,5,7))+
     theme(legend.justification = c(0.01, 0.99), 
           legend.position = c(0.01, 0.99),
           #legend.background = element_blank(),
           legend.key.width = unit(3,"line"),
           legend.text=element_text(size=8),
-          legend.title = element_blank())
+          legend.title = element_blank(),
+          axis.title.x=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank())
 
 setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
-tiff("Large_trees_over_time.tiff", height = 10, width = 25, units = "cm", res=300)
-LargeTrees
+
+
+tiff("Large_trees_and_canopy_dominance_over_time.tiff", height = 25, width = 10, units = "cm", res=300)
+#library(cowplot)
+plot_grid(LargeTrees, canopyDom, ncol=1, align="hv", rel_heights = c(1, 0.4))
 dev.off()
 
 
 
+
+
+# Add region and productivity inder and try to model 
 allSp_datT <- allSp3[allSp3$Region== "Trøndelag" & allSp3$yse=="7",]
 allSp_datT2 <- allSp3[allSp3$Region== "Telemark" & allSp3$yse=="7",]
 
@@ -464,7 +732,8 @@ plot(allSp_dat$Treatment[allSp_dat$Taxa== "Birch"], resid(birch)) # not good
 
 
 
-allSp_dat2 <- aggregate(data= allSp_dat, Quantity~Region+LocalityName+Treatment+Taxa, FUN = mean)
+allSp_dat2 <- aggregate(data= allSp_dat, Quantity~Region+LocalityName+Treatment+Taxa, FUN = mean, drop = F)
+table(allSp_dat2$Taxa)
 
 # trying simle KW test here (ignoring site productivity)
 kruskal.test(data= allSp_dat2[allSp_dat2$Taxa=="Birch",],
@@ -533,12 +802,6 @@ SC3 <- aggregate(data = SC2,
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
 
-thinned <- c("Hi_tydal", "Malvik", "Selbu_Flub")
-SA2x <- SA2[!SA2$LocalityName %in% thinned,]
-PA2x <- PA2[!PA2$LocalityName %in% thinned,]
-PS2x <- PS2[!PS2$LocalityName %in% thinned,]
-BP2x <- BP2[!BP2$LocalityName %in% thinned,]
-
 
 
 # DONT RUN!!! (unless making supplementary figure)
@@ -548,6 +811,13 @@ levels(density$Region)
 MyRegion <- "Trøndelag"
 MyRegion <- "Telemark"
 #MyRegion <- "Hedmark"
+
+thinned <- c("Hi_tydal", "Malvik", "Selbu_Flub")
+SA2x <- SA2[!SA2$LocalityName %in% thinned,]
+PA2x <- PA2[!PA2$LocalityName %in% thinned,]
+PS2x <- PS2[!PS2$LocalityName %in% thinned,]
+BP2x <- BP2[!BP2$LocalityName %in% thinned,]
+
 
 
 SA3 <- aggregate(data = subset(SA2x, Region == MyRegion),
@@ -803,6 +1073,228 @@ grid.draw(rbind(ggplotGrob(SA_fig),
 dev.off()
 
            
+# BARPLOT DEMOGRAPHY   ####
+
+
+# Make all values positive again
+#SA3$Quantity[SA3$Treatment == "B"] <- SA3$Quantity[SA3$Treatment == "B"]*(-1)
+#PA3$Quantity[PA3$Treatment == "B"] <- PA3$Quantity[PA3$Treatment == "B"]*(-1)
+#PS3$Quantity[PS3$Treatment == "B"] <- PS3$Quantity[PS3$Treatment == "B"]*(-1)
+#BP3$Quantity[BP3$Treatment == "B"] <- BP3$Quantity[BP3$Treatment == "B"]*(-1)
+
+SA3$taxa <- "Rowan"
+PA3$taxa <- "Spruce"
+PS3$taxa <- "Pine"
+BP3$taxa <- "Birch"
+BPdat <- rbind(SA3, PA3, PS3, BP3)
+BPdat$fyse <- factor(BPdat$fyse)
+BPdat$min <- 0
+
+tiff("demography_linerange.tiff", height = 20, width = 10, units = "cm", res = 300)
+ggplot()+theme_bw()+
+  geom_hline(yintercept=0,size=1)+
+  geom_linerange(data=BPdat[BPdat$Treatment=="UB" & BPdat$fH!="1",],
+                 aes(x=nH, ymax = Quantity, ymin = min, group=fyse, colour = fyse),
+                 size = 1.8, position = position_dodge(width=0.9))+
+  geom_linerange(data=BPdat[BPdat$Treatment=="B" & BPdat$fH!="1",],
+                 aes(x=nH, ymax = min, ymin = Quantity, group=fyse, colour = fyse),
+                 size = 1.8, position = position_dodge(width=0.9))+
+  scale_x_continuous(name = "Tree height (cm)",
+                     breaks = c(1, 2, 3, 4, 5, 6, 7),
+                     labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+  theme(panel.grid.major = element_blank())+
+  coord_flip()+
+  facet_wrap(~taxa, scales = "free", ncol = 1)+
+  guides(colour=guide_legend(title="Years\nsince\nexclosure"))+
+  ggtitle(paste(label = sprintf('\u2190'), " Open plots | Exclosures ", label =sprintf('\u2192')))+
+  theme(plot.title = element_text(hjust = 0.5))
+  #scale_y_continuous(name = "Mean number of trees per hectare",
+  #                   breaks = c(-2000, -1000,0,1000,2000),
+  #                   labels=c("2000", "1000","0","1000", "2000"),
+  #                   limits= c(-2300, 2300))
+dev.off()
+
+
+BPdat2 <- BPdat
+BPdat2$Quantity[BPdat2$Treatment=="B"] <- BPdat2$Quantity[BPdat2$Treatment=="B"]*(-1)
+levels(BPdat2$Treatment) <- c("Open plots", "Exclosures")
+
+p1 <- ggplot(data=BPdat2[BPdat2$fH!="1" & BPdat2$Treatment == "Open plots",])+
+         theme_bw()+
+         geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+                  position=position_dodge())+
+         scale_x_discrete(name = "Tree height (cm)",
+                          breaks = c(1, 2, 3, 4, 5, 6, 7),
+                          labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+         scale_fill_manual(values=c("grey80", "grey40", "black"))+
+         coord_flip(ylim = c(0,2300))+                                        
+         scale_y_continuous(name = "Mean number of trees",
+                            breaks = c(0,1000,2000),
+                            labels=c("0","1000", "2000"),
+                            trans = "reverse"               )+ 
+         facet_grid(taxa~Treatment)+
+         guides(fill=FALSE)+
+         theme(strip.text.y = element_blank(),
+               axis.title.x = element_text(hjust = 1),
+               panel.grid = element_blank()  )
+       
+p2 <-   ggplot(data=BPdat2[BPdat2$fH!="1" & BPdat2$Treatment == "Exclosures",])+
+         theme_bw()+
+         geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+                  position=position_dodge())+
+         theme(panel.grid.major = element_blank())+
+         scale_fill_manual(values=c("grey80", "grey40", "black"))+
+         coord_flip()+
+         scale_y_continuous(name = "per hectare",
+                            breaks = c(0,1000,2000),
+                            labels=c("0","1000", "2000"))+
+         facet_grid(taxa~Treatment)+
+         guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
+         theme(axis.title.y=element_blank(),
+               axis.text.y=element_blank(),
+               axis.ticks.y=element_blank(),
+               axis.title.x = element_text(hjust = 0),
+               panel.grid = element_blank() )
+       
+tiff("demography_barplot.tiff", height = 25, width = 15, units = "cm", res = 300)
+plot_grid(p1, p2, ncol=2, align="hv", rel_widths = c(0.95, 1))
+dev.off()
+
+
+# same but for first height category
+p3 <- ggplot(data=BPdat2[BPdat2$fH=="1" & BPdat2$Treatment == "Open plots",])+
+  theme_bw()+
+  geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+           position=position_dodge())+
+  scale_x_discrete(name = "Tree height (cm)",
+                   breaks = c(1, 2, 3, 4, 5, 6, 7),
+                   labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip(ylim = c(0,7500))+                                        
+  scale_y_continuous(name = "Mean number of trees",
+                     breaks = c(0,3000,6000),
+                     labels=c("0","3000", "6000"),
+                     trans = "reverse"               )+ 
+  facet_grid(taxa~Treatment)+
+  guides(fill=FALSE)+
+  theme(strip.text.y = element_blank(),
+        axis.title.x = element_text(hjust = 1),
+        panel.grid = element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+
+p4 <-   ggplot(data=BPdat2[BPdat2$fH=="1" & BPdat2$Treatment == "Exclosures",])+
+  theme_bw()+
+  geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+           position=position_dodge())+
+  theme(panel.grid.major = element_blank())+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip()+
+  scale_y_continuous(name = "< 50 cm per hectare",
+                     breaks = c(0,3000,6000),
+                     labels=c("0","3000", "6000"),
+                     limits = c(0,7500))+
+  facet_grid(taxa~Treatment)+
+  guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.x = element_text(hjust = 0),
+        panel.grid = element_blank() )
+
+#tiff("demography_barplot_small_trees.tiff", height = 25, width = 15, units = "cm", res = 300)
+plot_grid(p3, p4, ncol=2, align="hv", rel_widths = c(0.95, 1))
+dev.off()
+
+# same but for all height categories
+p5 <- ggplot(data=BPdat2[BPdat2$Treatment == "Open plots",])+
+  theme_bw()+
+  geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+           position=position_dodge())+
+  scale_x_discrete(name = "Tree height (cm)",
+                   breaks = c(1, 2, 3, 4, 5, 6, 7),
+                   labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip(ylim = c(0,7500))+                                        
+  scale_y_continuous(name = "Mean number of trees",
+                     breaks = c(0,3000,6000),
+                     labels=c("0","3000", "6000"),
+                     trans = "reverse"               )+ 
+  facet_grid(taxa~Treatment)+
+  guides(fill=FALSE)+
+  theme(strip.text.y = element_blank(),
+        axis.title.x = element_text(hjust = 1),
+        panel.grid = element_blank(),
+                axis.ticks.y=element_blank())
+
+p6 <-   ggplot(data=BPdat2[BPdat2$Treatment == "Exclosures",])+
+  theme_bw()+
+  geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+           position=position_dodge())+
+  theme(panel.grid.major = element_blank())+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip()+
+  scale_y_continuous(name = "per hectare",
+                     breaks = c(0,3000,6000),
+                     labels=c("0","3000", "6000"),
+                     limits = c(0,7500))+
+  facet_grid(taxa~Treatment)+
+  guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.x = element_text(hjust = 0),
+        panel.grid = element_blank() )
+
+tiff("demography_barplot_small_trees.tiff", height = 25, width = 15, units = "cm", res = 300)
+plot_grid(p5, p6, ncol=2, align="hv", rel_widths = c(0.95, 1))
+dev.off()
+
+
+#scale_y_continuous(name = "Mean number of trees per hectare",
+  #                   #breaks = c(-2000, -1000,0,1000,2000),
+  #                   labels=c("2000", "1000","0","1000", "2000"),
+  #                   limits= c(-2300, 2300))
+  
+  #ggtitle(paste(label = sprintf('\u2190'), " Open plots | Exclosures ", label =sprintf('\u2192')))+
+  #theme(plot.title = element_text(hjust = 0.5))
+
+
+
+B_dem <- ggplot(data = BPdat[BPdat$Treatment=="B",], aes(x = fH, y = Quantity, fill = fyse))+
+  geom_bar(stat = "identity",
+           position=position_dodge())+
+  facet_wrap(~taxa, ncol = 1)+
+  coord_flip()+
+  scale_y_reverse()+
+  ggtitle("Open plots")+
+  theme_bw()+
+  guides(fill=FALSE)
+  
+
+UB_dem <- ggplot(data = BPdat[BPdat$Treatment=="UB",], aes(x = fH, y = Quantity, fill = fyse))+
+  geom_bar(stat = "identity",
+           position=position_dodge())+
+  facet_wrap(~taxa, ncol = 1)+
+  coord_flip()+
+  ggtitle("Exclosures")+
+  theme_bw()+
+  theme(axis.title.y=element_blank(),
+       axis.text.y=element_blank(),
+       axis.ticks.y=element_blank())
+  
+  
+library(cowplot)
+plot_grid(B_dem, UB_dem, ncol=2, align="hv")
+
+grid.draw(rbind(ggplotGrob(B_dem), 
+                ggplotGrob(UB_dem),  
+                size = "last"), ncol = 2)
+
+
+
+
 
 
 # BOXplot #### 

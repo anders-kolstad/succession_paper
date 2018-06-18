@@ -20,6 +20,8 @@ library(reshape2)
 
 
 # data ####
+getwd()
+setwd("/home/anders/diskF/Anders L Kolstad/R/R_projects/succession_paper")
 density <- read_excel("density.xlsx", sheet = "Sheet1")
 
 # housekeeping
@@ -475,7 +477,7 @@ PS2$Region <- density$Region[match(PS2$LocalityName, density$LocalityName)]
 BP2$Region <- density$Region[match(BP2$LocalityName, density$LocalityName)]
 SC2$Region <- density$Region[match(SC2$LocalityName, density$LocalityName)]
 
-
+tempDat <- 
 
 # ******************************#
 # ******************************#
@@ -696,7 +698,7 @@ LargeTrees <- ggplot(data=allSp5 , aes(y=Quantity, x=yse, group=Treatment, linet
 setwd("M:/Anders L Kolstad/R/R_projects/succession_paper")
 
 
-tiff("Large_trees_and_canopy_dominance_over_time.tiff", height = 25, width = 10, units = "cm", res=300)
+#tiff("Large_trees_and_canopy_dominance_over_time.tiff", height = 25, width = 10, units = "cm", res=300)
 #library(cowplot)
 plot_grid(LargeTrees, canopyDom, ncol=1, align="hv", rel_heights = c(1, 0.4))
 dev.off()
@@ -784,8 +786,25 @@ dev.off()
 # ******************************************#
 # ******************************************#
 
+SA2$taxa <- "Rowan"
+PA2$taxa <- "Spruce"
+PS2$taxa <- "Pine"
+BP2$taxa <- "Birch"
+tempBPdat <- rbind(SA2, PA2, PS2, BP2)
 
 # get means per treatment
+tempBPdat2 <- aggregate(data = tempBPdat,
+                 Quantity~Treatment+yse+fH+taxa+LocalityName,
+                 FUN = mean)
+tempBPdat3 <- aggregate(data = tempBPdat2,
+                        Quantity~Treatment+yse+fH+taxa,
+                        FUN = mean)
+tempBPdat4 <- aggregate(data = tempBPdat2,
+                        Quantity~Treatment+yse+fH+taxa,
+                        FUN = sd)
+tempBPdat3$sd <- tempBPdat4$Quantity
+head(tempBPdat3)
+
 SA3 <- aggregate(data = SA2,
                  Quantity~Treatment+yse+fH,
                  FUN = mean)
@@ -838,10 +857,16 @@ BP3 <- aggregate(data = subset(BP2x, Region == MyRegion),
 
 # End of ' dont run'
 
-table(SA3$yse)
 
 
 range <- c(1,4,7)
+tempBPdat3$cH <- as.character(tempBPdat3$fH)
+tempBPdat3$nH <- as.numeric(tempBPdat3$cH)
+tempBPdat3$fyse <- as.factor(tempBPdat3$yse)
+tempBPdat3 <- tempBPdat3[tempBPdat3$fyse %in% range,]
+table(tempBPdat3$yse)
+head(tempBPdat3)
+
 
 SA3$cH <- as.character(SA3$fH)
 SA3$nH <- as.numeric(SA3$cH)
@@ -1077,20 +1102,20 @@ dev.off()
 
 
 # Make all values positive again
-#SA3$Quantity[SA3$Treatment == "B"] <- SA3$Quantity[SA3$Treatment == "B"]*(-1)
-#PA3$Quantity[PA3$Treatment == "B"] <- PA3$Quantity[PA3$Treatment == "B"]*(-1)
-#PS3$Quantity[PS3$Treatment == "B"] <- PS3$Quantity[PS3$Treatment == "B"]*(-1)
-#BP3$Quantity[BP3$Treatment == "B"] <- BP3$Quantity[BP3$Treatment == "B"]*(-1)
+SA3$Quantity[SA3$Treatment == "B"] <- SA3$Quantity[SA3$Treatment == "B"]*(-1)
+PA3$Quantity[PA3$Treatment == "B"] <- PA3$Quantity[PA3$Treatment == "B"]*(-1)
+PS3$Quantity[PS3$Treatment == "B"] <- PS3$Quantity[PS3$Treatment == "B"]*(-1)
+BP3$Quantity[BP3$Treatment == "B"] <- BP3$Quantity[BP3$Treatment == "B"]*(-1)
 
 SA3$taxa <- "Rowan"
 PA3$taxa <- "Spruce"
 PS3$taxa <- "Pine"
 BP3$taxa <- "Birch"
 BPdat <- rbind(SA3, PA3, PS3, BP3)
-BPdat$fyse <- factor(BPdat$fyse)
-BPdat$min <- 0
+#BPdat$fyse <- factor(BPdat$yse)
+#BPdat$min <- 0
 
-tiff("demography_linerange.tiff", height = 20, width = 10, units = "cm", res = 300)
+#tiff("demography_linerange.tiff", height = 20, width = 10, units = "cm", res = 300)
 ggplot()+theme_bw()+
   geom_hline(yintercept=0,size=1)+
   geom_linerange(data=BPdat[BPdat$Treatment=="UB" & BPdat$fH!="1",],
@@ -1116,49 +1141,102 @@ dev.off()
 
 
 BPdat2 <- BPdat
-BPdat2$Quantity[BPdat2$Treatment=="B"] <- BPdat2$Quantity[BPdat2$Treatment=="B"]*(-1)
+#BPdat2$Quantity[BPdat2$Treatment=="B"] <- BPdat2$Quantity[BPdat2$Treatment=="B"]*(-1)
+levels(tempBPdat3$Treatment) <- c("Open plots", "Exclosures")
 levels(BPdat2$Treatment) <- c("Open plots", "Exclosures")
+#BPdat2 <- BPdat2[BPdat2$yse %in% c(1,4,7),]
+#BPdat2$fyse <- factor(BPdat2$fyse)
 
-p1 <- ggplot(data=BPdat2[BPdat2$fH!="1" & BPdat2$Treatment == "Open plots",])+
-         theme_bw()+
-         geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
-                  position=position_dodge())+
-         scale_x_discrete(name = "Tree height (cm)",
-                          breaks = c(1, 2, 3, 4, 5, 6, 7),
-                          labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
-         scale_fill_manual(values=c("grey80", "grey40", "black"))+
-         coord_flip(ylim = c(0,2300))+                                        
-         scale_y_continuous(name = "Mean number of trees",
-                            breaks = c(0,1000,2000),
-                            labels=c("0","1000", "2000"),
-                            trans = "reverse"               )+ 
-         facet_grid(taxa~Treatment)+
-         guides(fill=FALSE)+
-         theme(strip.text.y = element_blank(),
-               axis.title.x = element_text(hjust = 1),
-               panel.grid = element_blank()  )
-       
-p2 <-   ggplot(data=BPdat2[BPdat2$fH!="1" & BPdat2$Treatment == "Exclosures",])+
-         theme_bw()+
-         geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
-                  position=position_dodge())+
-         theme(panel.grid.major = element_blank())+
-         scale_fill_manual(values=c("grey80", "grey40", "black"))+
-         coord_flip()+
-         scale_y_continuous(name = "per hectare",
-                            breaks = c(0,1000,2000),
-                            labels=c("0","1000", "2000"))+
-         facet_grid(taxa~Treatment)+
-         guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
-         theme(axis.title.y=element_blank(),
-               axis.text.y=element_blank(),
-               axis.ticks.y=element_blank(),
-               axis.title.x = element_text(hjust = 0),
-               panel.grid = element_blank() )
-       
-tiff("demography_barplot.tiff", height = 25, width = 15, units = "cm", res = 300)
-plot_grid(p1, p2, ncol=2, align="hv", rel_widths = c(0.95, 1))
+getwd()
+#save(BPdat2, file="BPdat2.RData")
+#load("BPdat2.RData")
+
+#tiff("/home/anders/Desktop/errorbars.tiff", height = 25, width = 15, units = "cm", res = 300)
+plot_grid(
+
+ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Open plots",])+
+  theme_bw()+
+    geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",  position= "dodge")+
+    geom_linerange(aes(x = fH, ymax = Quantity+sd, ymin=Quantity, group = fyse),  position= position_dodge(width = 0.9))+
+    scale_x_discrete(name = "Tree height (cm)",
+                  breaks = c(1, 2, 3, 4, 5, 6, 7),
+                  labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip(ylim = c(0,6000))+                                        
+  scale_y_continuous(name = "Mean number of trees",
+                     breaks = c(0,2000,4000, 6000),
+                     labels=c("0","2000", "4000", "6000"),
+                     trans = "reverse"               )+ 
+  facet_grid(taxa~Treatment)+
+  guides(fill=FALSE)+
+  theme(strip.text.y = element_blank(),
+        axis.title.x = element_text(hjust = 1),
+        panel.grid = element_blank()  ) # dont know how to make this nice - the errors are longer than the bars
+,
+ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Exclosures",])+
+  theme_bw()+
+  geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+           position="dodge")+
+  geom_linerange(aes(x = fH, ymax = Quantity+sd, ymin=Quantity, group = fyse),  position= position_dodge(width = 0.9))+
+  theme(panel.grid.major = element_blank())+
+  scale_fill_manual(values=c("grey80", "grey40", "black"))+
+  coord_flip(ylim = c(0,6000))+
+  scale_y_continuous(name = "per hectare",
+                     breaks = c(0,2000,4000, 6000),
+                     labels=c("0","2000", "4000", "6000"))+
+  facet_grid(taxa~Treatment)+
+  guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.title.x = element_text(hjust = 0),
+        panel.grid = element_blank() ),
+ncol=2, align="hv", rel_widths = c(0.95, 1))
 dev.off()
+
+
+
+#tiff("/home/anders/Desktop/no_errorbars.tiff", height = 25, width = 15, units = "cm", res = 300)
+plot_grid(
+  
+  ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Open plots",])+
+    theme_bw()+
+    geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",  position= "dodge")+
+    scale_x_discrete(name = "Tree height (cm)",
+                     breaks = c(1, 2, 3, 4, 5, 6, 7),
+                     labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
+    scale_fill_manual(values=c("grey80", "grey40", "black"))+
+    coord_flip(ylim = c(0,2300))+                                        
+    scale_y_continuous(name = "Mean number of trees",
+                       breaks = c(0,1000,2000),
+                       labels=c("0","1000", "2000"),
+                       trans = "reverse"               )+ 
+    facet_grid(taxa~Treatment)+
+    guides(fill=FALSE)+
+    theme(strip.text.y = element_blank(),
+          axis.title.x = element_text(hjust = 1),
+          panel.grid = element_blank()  ) # dont know how to make this nice - the errors are longer than the bars
+  ,
+  ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Exclosures",])+
+    theme_bw()+
+    geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
+             position="dodge")+
+    theme(panel.grid.major = element_blank())+
+    scale_fill_manual(values=c("grey80", "grey40", "black"))+
+    coord_flip(ylim = c(0,2300))+
+    scale_y_continuous(name = "per hectare",
+                       breaks = c(0,1000,2000),
+                       labels=c("0","1000", "2000"))+
+    facet_grid(taxa~Treatment)+
+    guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
+    theme(axis.title.y=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          axis.title.x = element_text(hjust = 0),
+          panel.grid = element_blank() ),
+  ncol=2, align="hv", rel_widths = c(0.95, 1))
+dev.off()
+
 
 
 # same but for first height category

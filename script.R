@@ -375,7 +375,7 @@ SC <- density[density$fTaxa == "Salix caprea (Selje)",]
 
 # shold I remove locations where the species is very rare? What is rare?
 # Defining rare as below 5 records over 7-9 years
-par(mar=c(12,5,2,2))
+#par(mar=c(12,5,2,2))
 
 
 SC.sub <- aggregate(data = SC,
@@ -477,7 +477,6 @@ PS2$Region <- density$Region[match(PS2$LocalityName, density$LocalityName)]
 BP2$Region <- density$Region[match(BP2$LocalityName, density$LocalityName)]
 SC2$Region <- density$Region[match(SC2$LocalityName, density$LocalityName)]
 
-tempDat <- 
 
 # ******************************#
 # ******************************#
@@ -801,8 +800,8 @@ tempBPdat3 <- aggregate(data = tempBPdat2,
                         FUN = mean)
 tempBPdat4 <- aggregate(data = tempBPdat2,
                         Quantity~Treatment+yse+fH+taxa,
-                        FUN = sd)
-tempBPdat3$sd <- tempBPdat4$Quantity
+                        FUN = se)
+tempBPdat3$se <- tempBPdat4$Quantity
 head(tempBPdat3)
 
 SA3 <- aggregate(data = SA2,
@@ -1150,22 +1149,22 @@ levels(BPdat2$Treatment) <- c("Open plots", "Exclosures")
 getwd()
 #save(BPdat2, file="BPdat2.RData")
 #load("BPdat2.RData")
-
-#tiff("/home/anders/Desktop/errorbars.tiff", height = 25, width = 15, units = "cm", res = 300)
+tempBPdat3$taxa <- factor(tempBPdat3$taxa)
+tiff("/home/anders/Desktop/errorbars.tiff", height = 25, width = 15, units = "cm", res = 300)
 plot_grid(
 
 ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Open plots",])+
   theme_bw()+
     geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",  position= "dodge")+
-    geom_linerange(aes(x = fH, ymax = Quantity+sd, ymin=Quantity, group = fyse),  position= position_dodge(width = 0.9))+
+    geom_linerange(aes(x = fH, ymax = Quantity, ymin=Quantity-se, group = fyse),  position= position_dodge(width = 0.9))+
     scale_x_discrete(name = "Tree height (cm)",
                   breaks = c(1, 2, 3, 4, 5, 6, 7),
                   labels=c("0-50","50-100","100-150", "150-200", "200-250", "250-300", ">300"))+
-  scale_fill_manual(values=c("grey80", "grey40", "black"))+
-  coord_flip(ylim = c(0,6000))+                                        
+  scale_fill_manual(values=c(grey(0.9), grey(0.6), grey(0.3)))+
+  coord_flip(ylim = c(0,2300))+                                      
   scale_y_continuous(name = "Mean number of trees",
-                     breaks = c(0,2000,4000, 6000),
-                     labels=c("0","2000", "4000", "6000"),
+                     breaks = c(0,1000,2000),
+                     labels=c("0","1000", "2000"),
                      trans = "reverse"               )+ 
   facet_grid(taxa~Treatment)+
   guides(fill=FALSE)+
@@ -1177,13 +1176,13 @@ ggplot(data=tempBPdat3[tempBPdat3$fH!="1" & tempBPdat3$Treatment == "Exclosures"
   theme_bw()+
   geom_bar(aes(x = fH, y = Quantity, fill = fyse), stat = "identity",
            position="dodge")+
-  geom_linerange(aes(x = fH, ymax = Quantity+sd, ymin=Quantity, group = fyse),  position= position_dodge(width = 0.9))+
+  geom_linerange(aes(x = fH, ymax = Quantity, ymin=Quantity-se, group = fyse),  position= position_dodge(width = 0.9))+
   theme(panel.grid.major = element_blank())+
-  scale_fill_manual(values=c("grey80", "grey40", "black"))+
-  coord_flip(ylim = c(0,6000))+
+  scale_fill_manual(values=c(grey(0.9), grey(0.6), grey(0.3)))+
+  coord_flip(ylim = c(0,2300))+
   scale_y_continuous(name = "per hectare",
-                     breaks = c(0,2000,4000, 6000),
-                     labels=c("0","2000", "4000", "6000"))+
+                     breaks = c(0,1000,2000),
+                     labels=c("0","1000", "2000"))+
   facet_grid(taxa~Treatment)+
   guides(fill=guide_legend(title="Years\nsince\nexclosure"))+
   theme(axis.title.y=element_blank(),
